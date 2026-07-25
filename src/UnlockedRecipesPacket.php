@@ -53,7 +53,9 @@ class UnlockedRecipesPacket extends DataPacket implements ClientboundPacket{
 	public function getRecipes() : array{ return $this->recipes; }
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$this->type = LE::readUnsignedInt($in);
+		$this->type = $protocolId >= ProtocolInfo::PROTOCOL_1_20_0 ?
+			LE::readUnsignedInt($in) :
+			(CommonTypes::getBool($in) ? self::TYPE_NEWLY_UNLOCKED : self::TYPE_INITIALLY_UNLOCKED);
 		$this->recipes = [];
 		for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; $i++){
 			$this->recipes[] = CommonTypes::getString($in);
@@ -61,7 +63,11 @@ class UnlockedRecipesPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		LE::writeUnsignedInt($out, $this->type);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_0){
+			LE::writeUnsignedInt($out, $this->type);
+		}else{
+			CommonTypes::putBool($out, $this->type === self::TYPE_NEWLY_UNLOCKED);
+		}
 		VarInt::writeUnsignedInt($out, count($this->recipes));
 		foreach($this->recipes as $recipe){
 			CommonTypes::putString($out, $recipe);

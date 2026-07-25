@@ -28,9 +28,9 @@ class EmotePacket extends DataPacket implements ClientboundPacket, ServerboundPa
 
 	private int $actorRuntimeId;
 	private string $emoteId;
-	private int $emoteLengthTicks;
-	private string $xboxUserId;
-	private string $platformChatId;
+	private int $emoteLengthTicks = 0;
+	private string $xboxUserId = "";
+	private string $platformChatId = "";
 	private int $flags;
 
 	/**
@@ -68,22 +68,26 @@ class EmotePacket extends DataPacket implements ClientboundPacket, ServerboundPa
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
 		$this->emoteId = CommonTypes::getString($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
-			$this->emoteLengthTicks = VarInt::readUnsignedInt($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_0){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
+				$this->emoteLengthTicks = VarInt::readUnsignedInt($in);
+			}
+			$this->xboxUserId = CommonTypes::getString($in);
+			$this->platformChatId = CommonTypes::getString($in);
 		}
-		$this->xboxUserId = CommonTypes::getString($in);
-		$this->platformChatId = CommonTypes::getString($in);
 		$this->flags = Byte::readUnsigned($in);
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
 		CommonTypes::putString($out, $this->emoteId);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
-			VarInt::writeUnsignedInt($out, $this->emoteLengthTicks);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_0){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
+				VarInt::writeUnsignedInt($out, $this->emoteLengthTicks);
+			}
+			CommonTypes::putString($out, $this->xboxUserId);
+			CommonTypes::putString($out, $this->platformChatId);
 		}
-		CommonTypes::putString($out, $this->xboxUserId);
-		CommonTypes::putString($out, $this->platformChatId);
 		Byte::writeUnsigned($out, $this->flags);
 	}
 
