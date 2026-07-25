@@ -17,6 +17,7 @@ namespace pocketmine\network\mcpe\protocol\types;
 use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
@@ -42,11 +43,15 @@ final class SubChunkPacketEntryCommon{
 	public function getRenderHeightMap() : ?SubChunkPacketHeightMapInfo{ return $this->renderHeightMap; }
 
 	public static function read(ByteBufferReader $in, int $protocolId, bool $cacheEnabled) : self{
-		$offset = SubChunkPositionOffset::read($in);
-
-		$requestResult = Byte::readUnsigned($in);
-
-		$data = !$cacheEnabled || $requestResult !== SubChunkRequestResult::SUCCESS_ALL_AIR ? CommonTypes::getString($in) : "";
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_10){
+			$offset = SubChunkPositionOffset::read($in);
+			$requestResult = Byte::readUnsigned($in);
+			$data = !$cacheEnabled || $requestResult !== SubChunkRequestResult::SUCCESS_ALL_AIR ? CommonTypes::getString($in) : "";
+		}else{
+			$offset = new SubChunkPositionOffset(0, 0, 0);
+			$data = CommonTypes::getString($in);
+			$requestResult = VarInt::readSignedInt($in);
+		}
 
 		$heightMapDataType = Byte::readUnsigned($in);
 		$heightMapData = match ($heightMapDataType) {
@@ -79,12 +84,15 @@ final class SubChunkPacketEntryCommon{
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId, bool $cacheEnabled) : void{
-		$this->offset->write($out);
-
-		Byte::writeUnsigned($out, $this->requestResult);
-
-		if(!$cacheEnabled || $this->requestResult !== SubChunkRequestResult::SUCCESS_ALL_AIR){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_10){
+			$this->offset->write($out);
+			Byte::writeUnsigned($out, $this->requestResult);
+			if(!$cacheEnabled || $this->requestResult !== SubChunkRequestResult::SUCCESS_ALL_AIR){
+				CommonTypes::putString($out, $this->terrainData);
+			}
+		}else{
 			CommonTypes::putString($out, $this->terrainData);
+			VarInt::writeSignedInt($out, $this->requestResult);
 		}
 
 		if($this->heightMap === null){

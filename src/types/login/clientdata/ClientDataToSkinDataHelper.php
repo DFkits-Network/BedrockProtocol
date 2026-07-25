@@ -61,7 +61,8 @@ final class ClientDataToSkinDataHelper{
 			$animations,
 			new SkinImage($clientData->CapeImageHeight, $clientData->CapeImageWidth, self::safeB64Decode($clientData->CapeData, "CapeData")),
 			self::safeB64Decode($clientData->SkinGeometryData, "SkinGeometryData"),
-			self::safeB64Decode($clientData->SkinGeometryDataEngineVersion, "SkinGeometryDataEngineVersion"), //yes, they actually base64'd the version!
+			isset($clientData->SkinGeometryDataEngineVersion) ?
+				self::safeB64Decode($clientData->SkinGeometryDataEngineVersion, "SkinGeometryDataEngineVersion") : "",
 			self::safeB64Decode($clientData->SkinAnimationData, "SkinAnimationData"),
 			$clientData->CapeId,
 			null,

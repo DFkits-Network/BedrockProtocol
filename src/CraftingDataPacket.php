@@ -81,7 +81,7 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 			$this->recipesWithTypeIds[] = match($recipeType){
 				self::ENTRY_SHAPELESS, self::ENTRY_USER_DATA_SHAPELESS, self::ENTRY_SHAPELESS_CHEMISTRY => ShapelessRecipe::decode($recipeType, $in, $protocolId),
 				self::ENTRY_SHAPED, self::ENTRY_SHAPED_CHEMISTRY => ShapedRecipe::decode($recipeType, $in, $protocolId),
-				self::ENTRY_FURNACE, self::ENTRY_FURNACE_DATA => FurnaceRecipe::decode($recipeType, $in),
+				self::ENTRY_FURNACE, self::ENTRY_FURNACE_DATA => FurnaceRecipe::decode($recipeType, $in, $protocolId),
 				self::ENTRY_MULTI => MultiRecipe::decode($recipeType, $in),
 				self::ENTRY_SMITHING_TRANSFORM => SmithingTransformRecipe::decode($recipeType, $in, $protocolId),
 				self::ENTRY_SMITHING_TRIM => SmithingTrimRecipe::decode($recipeType, $in),
@@ -104,16 +104,18 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 			$output = VarInt::readSignedInt($in);
 			$this->potionContainerRecipes[] = new PotionContainerChangeRecipe($input, $ingredient, $output);
 		}
-		for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; ++$i){
-			$inputIdAndData = VarInt::readSignedInt($in);
-			[$inputId, $inputMeta] = [$inputIdAndData >> 16, $inputIdAndData & 0x7fff];
-			$outputs = [];
-			for($j = 0, $outputCount = VarInt::readUnsignedInt($in); $j < $outputCount; ++$j){
-				$outputItemId = VarInt::readSignedInt($in);
-				$outputItemCount = VarInt::readSignedInt($in);
-				$outputs[] = new MaterialReducerRecipeOutput($outputItemId, $outputItemCount);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; ++$i){
+				$inputIdAndData = VarInt::readSignedInt($in);
+				[$inputId, $inputMeta] = [$inputIdAndData >> 16, $inputIdAndData & 0x7fff];
+				$outputs = [];
+				for($j = 0, $outputCount = VarInt::readUnsignedInt($in); $j < $outputCount; ++$j){
+					$outputItemId = VarInt::readSignedInt($in);
+					$outputItemCount = VarInt::readSignedInt($in);
+					$outputs[] = new MaterialReducerRecipeOutput($outputItemId, $outputItemCount);
+				}
+				$this->materialReducerRecipes[] = new MaterialReducerRecipe($inputId, $inputMeta, $outputs);
 			}
-			$this->materialReducerRecipes[] = new MaterialReducerRecipe($inputId, $inputMeta, $outputs);
 		}
 		$this->cleanRecipes = CommonTypes::getBool($in);
 	}
@@ -139,13 +141,15 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 			VarInt::writeSignedInt($out, $recipe->getIngredientItemId());
 			VarInt::writeSignedInt($out, $recipe->getOutputItemId());
 		}
-		VarInt::writeUnsignedInt($out, count($this->materialReducerRecipes));
-		foreach($this->materialReducerRecipes as $recipe){
-			VarInt::writeSignedInt($out, ($recipe->getInputItemId() << 16) | $recipe->getInputItemMeta());
-			VarInt::writeUnsignedInt($out, count($recipe->getOutputs()));
-			foreach($recipe->getOutputs() as $output){
-				VarInt::writeSignedInt($out, $output->getItemId());
-				VarInt::writeSignedInt($out, $output->getCount());
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			VarInt::writeUnsignedInt($out, count($this->materialReducerRecipes));
+			foreach($this->materialReducerRecipes as $recipe){
+				VarInt::writeSignedInt($out, ($recipe->getInputItemId() << 16) | $recipe->getInputItemMeta());
+				VarInt::writeUnsignedInt($out, count($recipe->getOutputs()));
+				foreach($recipe->getOutputs() as $output){
+					VarInt::writeSignedInt($out, $output->getItemId());
+					VarInt::writeSignedInt($out, $output->getCount());
+				}
 			}
 		}
 		CommonTypes::putBool($out, $this->cleanRecipes);

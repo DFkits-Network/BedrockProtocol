@@ -53,7 +53,7 @@ class InventoryContentPacket extends DataPacket implements ClientboundPacket{
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 				$this->items[] = CommonTypes::getNetworkItemStackDescriptor($in);
 			}else{
-				$this->items[] = CommonTypes::getItemStackWrapper($in);
+				$this->items[] = CommonTypes::getItemStackWrapper($in, $protocolId, true);
 			}
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
@@ -61,7 +61,7 @@ class InventoryContentPacket extends DataPacket implements ClientboundPacket{
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 				$this->storage = CommonTypes::getNetworkItemStackDescriptor($in);
 			}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_40){
-				$this->storage = CommonTypes::getItemStackWrapper($in);
+				$this->storage = CommonTypes::getItemStackWrapper($in, $protocolId);
 			}else{
 				$this->dynamicContainerSize = VarInt::readUnsignedInt($in);
 			}
@@ -77,7 +77,7 @@ class InventoryContentPacket extends DataPacket implements ClientboundPacket{
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 				CommonTypes::putNetworkItemStackDescriptor($out, $item);
 			}else{
-				CommonTypes::putItemStackWrapper($out, $item);
+				CommonTypes::putItemStackWrapper($out, $item, $protocolId, true);
 			}
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
@@ -85,7 +85,7 @@ class InventoryContentPacket extends DataPacket implements ClientboundPacket{
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 				CommonTypes::putNetworkItemStackDescriptor($out, $this->storage);
 			}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_40){
-				CommonTypes::putItemStackWrapper($out, $this->storage);
+				CommonTypes::putItemStackWrapper($out, $this->storage, $protocolId);
 			}else{
 				VarInt::writeUnsignedInt($out, $this->dynamicContainerSize);
 			}

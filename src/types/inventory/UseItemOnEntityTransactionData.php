@@ -74,7 +74,7 @@ class UseItemOnEntityTransactionData extends TransactionData{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			$this->itemInHand = CommonTypes::getNetworkItemStackDescriptor($in);
 		}else{
-			$this->itemInHand = CommonTypes::getItemStackWrapper($in);
+			$this->itemInHand = CommonTypes::getItemStackWrapper($in, $protocolId);
 		}
 		$this->playerPosition = CommonTypes::getVector3($in);
 		$this->clickPosition = CommonTypes::getVector3($in);
@@ -91,7 +91,7 @@ class UseItemOnEntityTransactionData extends TransactionData{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->itemInHand);
 		}else{
-			CommonTypes::putItemStackWrapper($out, $this->itemInHand);
+			CommonTypes::putItemStackWrapper($out, $this->itemInHand, $protocolId);
 		}
 		CommonTypes::putVector3($out, $this->playerPosition);
 		CommonTypes::putVector3($out, $this->clickPosition);

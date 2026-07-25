@@ -136,7 +136,7 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 			VarInt::writeSignedInt($out, $this->dimensionId);
 		}
 
-		if($this->clientSubChunkRequestsEnabled){
+		if($this->clientSubChunkRequestsEnabled && $protocolId >= ProtocolInfo::PROTOCOL_1_18_10){
 			if($this->subChunkCount === PHP_INT_MAX){
 				VarInt::writeUnsignedInt($out, self::CLIENT_REQUEST_FULL_COLUMN_FAKE_COUNT);
 			}else{

@@ -47,7 +47,7 @@ class MobEquipmentPacket extends DataPacket implements ClientboundPacket, Server
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			$this->item = CommonTypes::getNetworkItemStackDescriptor($in);
 		}else{
-			$this->item = CommonTypes::getItemStackWrapper($in);
+			$this->item = CommonTypes::getItemStackWrapper($in, $protocolId);
 		}
 		$this->inventorySlot = Byte::readUnsigned($in);
 		$this->hotbarSlot = Byte::readUnsigned($in);
@@ -59,7 +59,7 @@ class MobEquipmentPacket extends DataPacket implements ClientboundPacket, Server
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->item);
 		}else{
-			CommonTypes::putItemStackWrapper($out, $this->item);
+			CommonTypes::putItemStackWrapper($out, $this->item, $protocolId);
 		}
 		Byte::writeUnsigned($out, $this->inventorySlot);
 		Byte::writeUnsigned($out, $this->hotbarSlot);

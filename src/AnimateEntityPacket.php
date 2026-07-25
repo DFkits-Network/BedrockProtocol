@@ -83,7 +83,9 @@ class AnimateEntityPacket extends DataPacket implements ClientboundPacket{
 		$this->animation = CommonTypes::getString($in);
 		$this->nextState = CommonTypes::getString($in);
 		$this->stopExpression = CommonTypes::getString($in);
-		$this->stopExpressionVersion = LE::readSignedInt($in);
+		$this->stopExpressionVersion = $protocolId >= ProtocolInfo::PROTOCOL_1_17_30 ?
+			LE::readSignedInt($in) :
+			0;
 		$this->controller = CommonTypes::getString($in);
 		$this->blendOutTime = LE::readFloat($in);
 		$this->actorRuntimeIds = [];
@@ -96,7 +98,9 @@ class AnimateEntityPacket extends DataPacket implements ClientboundPacket{
 		CommonTypes::putString($out, $this->animation);
 		CommonTypes::putString($out, $this->nextState);
 		CommonTypes::putString($out, $this->stopExpression);
-		LE::writeSignedInt($out, $this->stopExpressionVersion);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			LE::writeSignedInt($out, $this->stopExpressionVersion);
+		}
 		CommonTypes::putString($out, $this->controller);
 		LE::writeFloat($out, $this->blendOutTime);
 		VarInt::writeUnsignedInt($out, count($this->actorRuntimeIds));

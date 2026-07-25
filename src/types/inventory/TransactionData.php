@@ -19,6 +19,8 @@ use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\DataDecodeException;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
+use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use function count;
 
 abstract class TransactionData{
@@ -39,10 +41,11 @@ abstract class TransactionData{
 	 * @throws PacketDecodeException
 	 */
 	final public function decodeTransaction(ByteBufferReader $in, int $protocolId) : void{
+		$hasItemStackIds = $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && CommonTypes::getBool($in);
 		$actionCount = VarInt::readUnsignedInt($in);
 		$this->actions = [];
 		for($i = 0; $i < $actionCount; ++$i){
-			$this->actions[] = (new NetworkInventoryAction())->readTransaction($in, $protocolId);
+			$this->actions[] = (new NetworkInventoryAction())->readTransaction($in, $protocolId, $hasItemStackIds);
 		}
 		$this->decodeData($in, $protocolId);
 	}
@@ -51,11 +54,12 @@ abstract class TransactionData{
 	 * @throws DataDecodeException
 	 * @throws PacketDecodeException
 	 */
-	final public function decodeAuthInput(ByteBufferReader $in) : void{
+	final public function decodeAuthInput(ByteBufferReader $in, int $protocolId) : void{
+		$hasItemStackIds = $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && CommonTypes::getBool($in);
 		$actionCount = VarInt::readUnsignedInt($in);
 		$this->actions = [];
 		for($i = 0; $i < $actionCount; ++$i){
-			$this->actions[] = (new NetworkInventoryAction())->readAuthInput($in);
+			$this->actions[] = (new NetworkInventoryAction())->readAuthInput($in, $protocolId, $hasItemStackIds);
 		}
 	}
 
@@ -66,6 +70,9 @@ abstract class TransactionData{
 	abstract protected function decodeData(ByteBufferReader $in, int $protocolId) : void;
 
 	final public function encodeTransaction(ByteBufferWriter $out, int $protocolId) : void{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_16_220){
+			CommonTypes::putBool($out, false);
+		}
 		VarInt::writeUnsignedInt($out, count($this->actions));
 		foreach($this->actions as $action){
 			$action->writeTransaction($out, $protocolId);
@@ -73,10 +80,13 @@ abstract class TransactionData{
 		$this->encodeData($out, $protocolId);
 	}
 
-	final public function encodeAuthInput(ByteBufferWriter $out) : void{
+	final public function encodeAuthInput(ByteBufferWriter $out, int $protocolId) : void{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_16_220){
+			CommonTypes::putBool($out, false);
+		}
 		VarInt::writeUnsignedInt($out, count($this->actions));
 		foreach($this->actions as $action){
-			$action->writeAuthInput($out);
+			$action->writeAuthInput($out, $protocolId);
 		}
 	}
 

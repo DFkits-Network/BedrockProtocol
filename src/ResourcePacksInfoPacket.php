@@ -93,7 +93,9 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 		}
 		$this->hasScripts = CommonTypes::getBool($in);
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_21_20){
-			$this->forceServerPacks = CommonTypes::getBool($in);
+			$this->forceServerPacks = $protocolId >= ProtocolInfo::PROTOCOL_1_17_10 ?
+				CommonTypes::getBool($in) :
+				false;
 			$behaviorPackCount = LE::readUnsignedShort($in);
 			while($behaviorPackCount-- > 0){
 				$this->behaviorPackEntries[] = BehaviorPackInfoEntry::read($in, $protocolId);
@@ -129,7 +131,9 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 		}
 		CommonTypes::putBool($out, $this->hasScripts);
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_21_20){
-			CommonTypes::putBool($out, $this->forceServerPacks);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_17_10){
+				CommonTypes::putBool($out, $this->forceServerPacks);
+			}
 			LE::writeUnsignedShort($out, count($this->behaviorPackEntries));
 			foreach($this->behaviorPackEntries as $entry){
 				$entry->write($out, $protocolId);

@@ -58,20 +58,29 @@ class PhotoTransferPacket extends DataPacket implements ClientboundPacket{
 		$this->photoName = CommonTypes::getString($in);
 		$this->photoData = CommonTypes::getString($in);
 		$this->bookId = CommonTypes::getString($in);
-		$this->type = Byte::readUnsigned($in);
-		$this->sourceType = Byte::readUnsigned($in);
-		$this->ownerActorUniqueId = LE::readSignedLong($in); //...............
-		$this->newPhotoName = CommonTypes::getString($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			$this->type = Byte::readUnsigned($in);
+			$this->sourceType = Byte::readUnsigned($in);
+			$this->ownerActorUniqueId = LE::readSignedLong($in); //...............
+			$this->newPhotoName = CommonTypes::getString($in);
+		}else{
+			$this->type = 0;
+			$this->sourceType = 0;
+			$this->ownerActorUniqueId = 0;
+			$this->newPhotoName = "";
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->photoName);
 		CommonTypes::putString($out, $this->photoData);
 		CommonTypes::putString($out, $this->bookId);
-		Byte::writeUnsigned($out, $this->type);
-		Byte::writeUnsigned($out, $this->sourceType);
-		LE::writeSignedLong($out, $this->ownerActorUniqueId);
-		CommonTypes::putString($out, $this->newPhotoName);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			Byte::writeUnsigned($out, $this->type);
+			Byte::writeUnsigned($out, $this->sourceType);
+			LE::writeSignedLong($out, $this->ownerActorUniqueId);
+			CommonTypes::putString($out, $this->newPhotoName);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

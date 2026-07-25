@@ -56,7 +56,7 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 			null;
 		$input = CommonTypes::getRecipeIngredient($in);
 		$addition = CommonTypes::getRecipeIngredient($in);
-		$output = CommonTypes::getItemStackWithoutStackId($in);
+		$output = CommonTypes::getItemStackWithoutStackId($in, $protocolId);
 		$blockName = CommonTypes::getString($in);
 		$recipeNetId = CommonTypes::readRecipeNetId($in);
 
@@ -82,7 +82,7 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 		}
 		CommonTypes::putRecipeIngredient($out, $this->input);
 		CommonTypes::putRecipeIngredient($out, $this->addition);
-		CommonTypes::putItemStackWithoutStackId($out, $this->output);
+		CommonTypes::putItemStackWithoutStackId($out, $this->output, $protocolId);
 		CommonTypes::putString($out, $this->blockName);
 		CommonTypes::writeRecipeNetId($out, $this->recipeNetId);
 	}

@@ -53,11 +53,14 @@ class SubChunkPacket extends DataPacket implements ClientboundPacket{
 	public function getEntries() : ListWithBlobHashes|ListWithoutBlobHashes{ return $this->entries; }
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$cacheEnabled = CommonTypes::getBool($in);
+		$newSubChunkFormat = $protocolId >= ProtocolInfo::PROTOCOL_1_18_10;
+		$cacheEnabled = $newSubChunkFormat ? CommonTypes::getBool($in) : $protocolId === ProtocolInfo::PROTOCOL_1_18_0;
 		$this->dimension = VarInt::readSignedInt($in);
-		$this->baseSubChunkPosition = SubChunkPosition::readVarInts($in);
+		$this->baseSubChunkPosition = $newSubChunkFormat ?
+			SubChunkPosition::readVarInts($in) :
+			new SubChunkPosition(0, 0, 0);
 
-		$count = LE::readUnsignedInt($in);
+		$count = $newSubChunkFormat ? LE::readUnsignedInt($in) : 1;
 		if($cacheEnabled){
 			$entries = [];
 			for($i = 0; $i < $count; $i++){
@@ -74,11 +77,19 @@ class SubChunkPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		CommonTypes::putBool($out, $this->entries instanceof ListWithBlobHashes);
+		$newSubChunkFormat = $protocolId >= ProtocolInfo::PROTOCOL_1_18_10;
+		if($newSubChunkFormat){
+			CommonTypes::putBool($out, $this->entries instanceof ListWithBlobHashes);
+		}elseif($this->entries instanceof ListWithBlobHashes && $protocolId !== ProtocolInfo::PROTOCOL_1_18_0){
+			throw new \InvalidArgumentException("SubChunkPacket does not support blob hashes before protocol " . ProtocolInfo::PROTOCOL_1_18_0);
+		}
 		VarInt::writeSignedInt($out, $this->dimension);
-		$this->baseSubChunkPosition->writeVarInts($out);
-
-		LE::writeUnsignedInt($out, count($this->entries->getEntries()));
+		if($newSubChunkFormat){
+			$this->baseSubChunkPosition->writeVarInts($out);
+			LE::writeUnsignedInt($out, count($this->entries->getEntries()));
+		}elseif(count($this->entries->getEntries()) !== 1){
+			throw new \InvalidArgumentException("Legacy SubChunkPacket must contain exactly one entry");
+		}
 
 		foreach($this->entries->getEntries() as $entry){
 			$entry->write($out, $protocolId);

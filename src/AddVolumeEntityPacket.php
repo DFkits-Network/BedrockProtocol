@@ -80,27 +80,38 @@ class AddVolumeEntityPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->entityNetId = VarInt::readUnsignedInt($in);
 		$this->data = new CacheableNbt(CommonTypes::getNbtCompoundRoot($in));
-		$this->jsonIdentifier = CommonTypes::getString($in);
-		$this->instanceName = CommonTypes::getString($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_30){
-			$this->minBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-			$this->maxBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-			$this->dimension = VarInt::readSignedInt($in);
+		$this->jsonIdentifier = "";
+		$this->instanceName = "";
+		$this->engineVersion = "";
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_18_10){
+				$this->jsonIdentifier = CommonTypes::getString($in);
+				$this->instanceName = CommonTypes::getString($in);
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_18_30){
+					$this->minBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+					$this->maxBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+					$this->dimension = VarInt::readSignedInt($in);
+				}
+			}
+			$this->engineVersion = CommonTypes::getString($in);
 		}
-		$this->engineVersion = CommonTypes::getString($in);
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeUnsignedInt($out, $this->entityNetId);
 		$out->writeByteArray($this->data->getEncodedNbt());
-		CommonTypes::putString($out, $this->jsonIdentifier);
-		CommonTypes::putString($out, $this->instanceName);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_30){
-			CommonTypes::putBlockPosition($out, $this->minBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-			CommonTypes::putBlockPosition($out, $this->maxBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-			VarInt::writeSignedInt($out, $this->dimension);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_18_10){
+				CommonTypes::putString($out, $this->jsonIdentifier);
+				CommonTypes::putString($out, $this->instanceName);
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_18_30){
+					CommonTypes::putBlockPosition($out, $this->minBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+					CommonTypes::putBlockPosition($out, $this->maxBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+					VarInt::writeSignedInt($out, $this->dimension);
+				}
+			}
+			CommonTypes::putString($out, $this->engineVersion);
 		}
-		CommonTypes::putString($out, $this->engineVersion);
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

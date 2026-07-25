@@ -67,7 +67,9 @@ final class CommandRawData{
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$name = CommonTypes::getString($in);
 		$description = CommonTypes::getString($in);
-		$flags = LE::readUnsignedShort($in);
+		$flags = $protocolId >= ProtocolInfo::PROTOCOL_1_17_10 ?
+			LE::readUnsignedShort($in) :
+			Byte::readUnsigned($in);
 		$permission = $protocolId >= ProtocolInfo::PROTOCOL_1_21_130 ? CommonTypes::getString($in) : CommandPermissions::toName(Byte::readUnsigned($in));
 		$aliasEnumIndex = LE::readSignedInt($in); //may be -1 for not set
 
@@ -97,7 +99,11 @@ final class CommandRawData{
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->name);
 		CommonTypes::putString($out, $this->description);
-		LE::writeUnsignedShort($out, $this->flags);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_10){
+			LE::writeUnsignedShort($out, $this->flags);
+		}else{
+			Byte::writeUnsigned($out, $this->flags);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_130){
 			CommonTypes::putString($out, $this->permission);
 		}else{

@@ -156,7 +156,9 @@ final class LevelSettings{
 		$this->limitedWorldWidth = LE::readSignedInt($in); //doesn't make sense for this to be signed, but that's what the spec says
 		$this->limitedWorldLength = LE::readSignedInt($in); //same as above
 		$this->isNewNether = CommonTypes::getBool($in);
-		$this->eduSharedUriResource = EducationUriResource::read($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			$this->eduSharedUriResource = EducationUriResource::read($in);
+		}
 		$this->experimentalGameplayOverride = CommonTypes::readOptional($in, CommonTypes::getBool(...));
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
 			$this->chatRestrictionLevel = Byte::readUnsigned($in);
@@ -236,7 +238,9 @@ final class LevelSettings{
 		LE::writeSignedInt($out, $this->limitedWorldWidth); //doesn't make sense for this to be signed, but that's what the spec says
 		LE::writeSignedInt($out, $this->limitedWorldLength); //same as above
 		CommonTypes::putBool($out, $this->isNewNether);
-		($this->eduSharedUriResource ?? new EducationUriResource("", ""))->write($out);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+			($this->eduSharedUriResource ?? new EducationUriResource("", ""))->write($out);
+		}
 		CommonTypes::writeOptional($out, $this->experimentalGameplayOverride, CommonTypes::putBool(...));
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
 			Byte::writeUnsigned($out, $this->chatRestrictionLevel);

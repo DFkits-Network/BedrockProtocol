@@ -34,6 +34,15 @@ final class ProtocolInfo{
 	/** Actual Minecraft: PE protocol version */
 	public const CURRENT_PROTOCOL = self::PROTOCOL_1_26_30;
 	public const ACCEPTED_PROTOCOL = [
+		self::PROTOCOL_1_16_100,
+		self::PROTOCOL_1_16_200,
+		self::PROTOCOL_1_16_210,
+		self::PROTOCOL_1_16_220,
+		self::PROTOCOL_1_17_0,
+		self::PROTOCOL_1_17_10,
+		self::PROTOCOL_1_17_30,
+		self::PROTOCOL_1_17_40,
+		self::PROTOCOL_1_18_0,
 		self::PROTOCOL_1_18_10,
 		self::PROTOCOL_1_18_30,
 		self::PROTOCOL_1_19_0,
@@ -122,6 +131,15 @@ final class ProtocolInfo{
 	public const PROTOCOL_1_19_0 = 527;
 	public const PROTOCOL_1_18_30 = 503;
 	public const PROTOCOL_1_18_10 = 486;
+	public const PROTOCOL_1_18_0 = 475;
+	public const PROTOCOL_1_17_40 = 471;
+	public const PROTOCOL_1_17_30 = 465;
+	public const PROTOCOL_1_17_10 = 448;
+	public const PROTOCOL_1_17_0 = 440;
+	public const PROTOCOL_1_16_220 = 431;
+	public const PROTOCOL_1_16_210 = 428;
+	public const PROTOCOL_1_16_200 = 422;
+	public const PROTOCOL_1_16_100 = 419;
 
 	public const LOGIN_PACKET = 0x01;
 	public const PLAY_STATUS_PACKET = 0x02;
@@ -159,7 +177,7 @@ final class ProtocolInfo{
 	public const BLOCK_PICK_REQUEST_PACKET = 0x22;
 	public const ACTOR_PICK_REQUEST_PACKET = 0x23;
 	public const PLAYER_ACTION_PACKET = 0x24;
-
+	public const ACTOR_FALL_PACKET = 0x25;
 	public const HURT_ARMOR_PACKET = 0x26;
 	public const SET_ACTOR_DATA_PACKET = 0x27;
 	public const SET_ACTOR_MOTION_PACKET = 0x28;
