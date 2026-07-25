@@ -82,9 +82,11 @@ class AddVolumeEntityPacket extends DataPacket implements ClientboundPacket{
 		$this->data = new CacheableNbt(CommonTypes::getNbtCompoundRoot($in));
 		$this->jsonIdentifier = CommonTypes::getString($in);
 		$this->instanceName = CommonTypes::getString($in);
-		$this->minBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-		$this->maxBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-		$this->dimension = VarInt::readSignedInt($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_30){
+			$this->minBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+			$this->maxBound = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+			$this->dimension = VarInt::readSignedInt($in);
+		}
 		$this->engineVersion = CommonTypes::getString($in);
 	}
 
@@ -93,9 +95,11 @@ class AddVolumeEntityPacket extends DataPacket implements ClientboundPacket{
 		$out->writeByteArray($this->data->getEncodedNbt());
 		CommonTypes::putString($out, $this->jsonIdentifier);
 		CommonTypes::putString($out, $this->instanceName);
-		CommonTypes::putBlockPosition($out, $this->minBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-		CommonTypes::putBlockPosition($out, $this->maxBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-		VarInt::writeSignedInt($out, $this->dimension);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_30){
+			CommonTypes::putBlockPosition($out, $this->minBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+			CommonTypes::putBlockPosition($out, $this->maxBound, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+			VarInt::writeSignedInt($out, $this->dimension);
+		}
 		CommonTypes::putString($out, $this->engineVersion);
 	}
 

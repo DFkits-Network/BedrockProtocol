@@ -88,6 +88,7 @@ class PacketPool{
 		$this->registerPacket(new CraftingDataPacket());
 		$this->registerPacket(new CraftingEventPacket());
 		$this->registerPacket(new GuiDataPickItemPacket());
+		$this->registerPacket(new AdventureSettingsPacket());
 		$this->registerPacket(new BlockActorDataPacket());
 		$this->registerPacket(new PlayerInputPacket());
 		$this->registerPacket(new LevelChunkPacket());
@@ -103,6 +104,7 @@ class PacketPool{
 		$this->registerPacket(new MapInfoRequestPacket());
 		$this->registerPacket(new RequestChunkRadiusPacket());
 		$this->registerPacket(new ChunkRadiusUpdatedPacket());
+		$this->registerPacket(new ItemFrameDropItemPacket());
 		$this->registerPacket(new GameRulesChangedPacket());
 		$this->registerPacket(new CameraPacket());
 		$this->registerPacket(new BossEventPacket());
@@ -188,6 +190,7 @@ class PacketPool{
 		$this->registerPacket(new PlayerFogPacket());
 		$this->registerPacket(new CorrectPlayerMovePredictionPacket());
 		$this->registerPacket(new ItemRegistryPacket());
+		$this->registerPacket(new FilterTextPacket());
 		$this->registerPacket(new ClientboundDebugRendererPacket());
 		$this->registerPacket(new SyncActorPropertyPacket());
 		$this->registerPacket(new AddVolumeEntityPacket());

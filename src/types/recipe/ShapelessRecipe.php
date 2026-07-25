@@ -86,7 +86,7 @@ final class ShapelessRecipe extends RecipeWithTypeId{
 		$recipeId = CommonTypes::getString($in);
 		$input = [];
 		for($j = 0, $ingredientCount = VarInt::readUnsignedInt($in); $j < $ingredientCount; ++$j){
-			$input[] = CommonTypes::getRecipeIngredient($in);
+			$input[] = CommonTypes::getRecipeIngredient($in, $protocolId);
 		}
 		$output = [];
 		for($k = 0, $resultCount = VarInt::readUnsignedInt($in); $k < $resultCount; ++$k){
@@ -108,7 +108,7 @@ final class ShapelessRecipe extends RecipeWithTypeId{
 		CommonTypes::putString($out, $this->recipeId);
 		VarInt::writeUnsignedInt($out, count($this->inputs));
 		foreach($this->inputs as $item){
-			CommonTypes::putRecipeIngredient($out, $item);
+			CommonTypes::putRecipeIngredient($out, $item, $protocolId);
 		}
 
 		VarInt::writeUnsignedInt($out, count($this->outputs));

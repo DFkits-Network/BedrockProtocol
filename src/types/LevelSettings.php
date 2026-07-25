@@ -100,7 +100,9 @@ final class LevelSettings{
 	 * @throws PacketDecodeException
 	 */
 	private function internalRead(ByteBufferReader $in, ServerTelemetryData &$serverTelemetryData, int $protocolId) : void{
-		$this->seed = LE::readUnsignedLong($in);
+		$this->seed = $protocolId >= ProtocolInfo::PROTOCOL_1_18_30 ?
+			LE::readUnsignedLong($in) :
+			VarInt::readSignedInt($in);
 		$this->spawnSettings = SpawnSettings::read($in);
 		$this->generator = VarInt::readSignedInt($in);
 		$this->worldGamemode = VarInt::readSignedInt($in);
@@ -110,7 +112,9 @@ final class LevelSettings{
 		$this->difficulty = VarInt::readSignedInt($in);
 		$this->spawnPosition = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
 		$this->hasAchievementsDisabled = CommonTypes::getBool($in);
-		$this->editorWorldType = $protocolId >= ProtocolInfo::PROTOCOL_1_20_30 ? VarInt::readSignedInt($in) : (CommonTypes::getBool($in) ? EditorWorldType::PROJECT : EditorWorldType::NON_EDITOR);
+		$this->editorWorldType = $protocolId >= ProtocolInfo::PROTOCOL_1_20_30 ?
+			VarInt::readSignedInt($in) :
+			($protocolId >= ProtocolInfo::PROTOCOL_1_19_10 && CommonTypes::getBool($in) ? EditorWorldType::PROJECT : EditorWorldType::NON_EDITOR);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_80){
 			$this->createdInEditorMode = CommonTypes::getBool($in);
 			$this->exportedFromEditorMode = CommonTypes::getBool($in);
@@ -141,8 +145,10 @@ final class LevelSettings{
 		$this->isFromWorldTemplate = CommonTypes::getBool($in);
 		$this->isWorldTemplateOptionLocked = CommonTypes::getBool($in);
 		$this->onlySpawnV1Villagers = CommonTypes::getBool($in);
-		$this->disablePersona = CommonTypes::getBool($in);
-		$this->disableCustomSkins = CommonTypes::getBool($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
+			$this->disablePersona = CommonTypes::getBool($in);
+			$this->disableCustomSkins = CommonTypes::getBool($in);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_60){
 			$this->muteEmoteAnnouncements = CommonTypes::getBool($in);
 		}
@@ -152,8 +158,10 @@ final class LevelSettings{
 		$this->isNewNether = CommonTypes::getBool($in);
 		$this->eduSharedUriResource = EducationUriResource::read($in);
 		$this->experimentalGameplayOverride = CommonTypes::readOptional($in, CommonTypes::getBool(...));
-		$this->chatRestrictionLevel = Byte::readUnsigned($in);
-		$this->disablePlayerInteractions = CommonTypes::getBool($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
+			$this->chatRestrictionLevel = Byte::readUnsigned($in);
+			$this->disablePlayerInteractions = CommonTypes::getBool($in);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			$this->serverEditorConnectionPolicy = VarInt::readSignedInt($in);
 			$this->allowAnonymousBlockDropsInEditorWorlds = CommonTypes::getBool($in);
@@ -168,7 +176,11 @@ final class LevelSettings{
 	}
 
 	public function write(ByteBufferWriter $out, ServerTelemetryData $serverTelemetryData, int $protocolId) : void{
-		LE::writeUnsignedLong($out, $this->seed);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_30){
+			LE::writeUnsignedLong($out, $this->seed);
+		}else{
+			VarInt::writeSignedInt($out, $this->seed);
+		}
 		$this->spawnSettings->write($out);
 		VarInt::writeSignedInt($out, $this->generator);
 		VarInt::writeSignedInt($out, $this->worldGamemode);
@@ -180,7 +192,7 @@ final class LevelSettings{
 		CommonTypes::putBool($out, $this->hasAchievementsDisabled);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_30){
 			VarInt::writeSignedInt($out, $this->editorWorldType);
-		}else{
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_19_10){
 			CommonTypes::putBool($out, $this->editorWorldType !== EditorWorldType::NON_EDITOR);
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_80){
@@ -213,8 +225,10 @@ final class LevelSettings{
 		CommonTypes::putBool($out, $this->isFromWorldTemplate);
 		CommonTypes::putBool($out, $this->isWorldTemplateOptionLocked);
 		CommonTypes::putBool($out, $this->onlySpawnV1Villagers);
-		CommonTypes::putBool($out, $this->disablePersona);
-		CommonTypes::putBool($out, $this->disableCustomSkins);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
+			CommonTypes::putBool($out, $this->disablePersona);
+			CommonTypes::putBool($out, $this->disableCustomSkins);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_60){
 			CommonTypes::putBool($out, $this->muteEmoteAnnouncements);
 		}
@@ -224,8 +238,10 @@ final class LevelSettings{
 		CommonTypes::putBool($out, $this->isNewNether);
 		($this->eduSharedUriResource ?? new EducationUriResource("", ""))->write($out);
 		CommonTypes::writeOptional($out, $this->experimentalGameplayOverride, CommonTypes::putBool(...));
-		Byte::writeUnsigned($out, $this->chatRestrictionLevel);
-		CommonTypes::putBool($out, $this->disablePlayerInteractions);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
+			Byte::writeUnsigned($out, $this->chatRestrictionLevel);
+			CommonTypes::putBool($out, $this->disablePlayerInteractions);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			VarInt::writeSignedInt($out, $this->serverEditorConnectionPolicy);
 			CommonTypes::putBool($out, $this->allowAnonymousBlockDropsInEditorWorlds);

@@ -98,7 +98,9 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 		$this->pitch = LE::readFloat($in);
 		$this->yaw = LE::readFloat($in);
 		$this->headYaw = LE::readFloat($in);
-		$this->bodyYaw = LE::readFloat($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_10){
+			$this->bodyYaw = LE::readFloat($in);
+		}
 
 		$attrCount = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $attrCount; ++$i){
@@ -129,7 +131,9 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 		LE::writeFloat($out, $this->pitch);
 		LE::writeFloat($out, $this->yaw);
 		LE::writeFloat($out, $this->headYaw);
-		LE::writeFloat($out, $this->bodyYaw);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_10){
+			LE::writeFloat($out, $this->bodyYaw);
+		}
 
 		VarInt::writeUnsignedInt($out, count($this->attributes));
 		foreach($this->attributes as $attribute){

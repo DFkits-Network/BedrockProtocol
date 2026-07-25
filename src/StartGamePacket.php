@@ -169,6 +169,7 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 		$this->pitch = LE::readFloat($in);
 		$this->yaw = LE::readFloat($in);
 
+		$this->serverTelemetryData = new ServerTelemetryData("", "", "", "");
 		$this->levelSettings = LevelSettings::read($in, $this->serverTelemetryData, $protocolId);
 
 		$this->levelId = CommonTypes::getString($in);
@@ -201,10 +202,16 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 		$this->multiplayerCorrelationId = CommonTypes::getString($in);
 		$this->enableNewInventorySystem = CommonTypes::getBool($in);
 		$this->serverSoftwareVersion = CommonTypes::getString($in);
-		$this->playerActorProperties = new CacheableNbt(CommonTypes::getNbtCompoundRoot($in));
-		$this->blockPaletteChecksum = LE::readUnsignedLong($in);
-		$this->worldTemplateId = CommonTypes::getUUID($in);
-		$this->enableClientSideChunkGeneration = CommonTypes::getBool($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_0){
+			$this->playerActorProperties = new CacheableNbt(CommonTypes::getNbtCompoundRoot($in));
+			$this->blockPaletteChecksum = LE::readUnsignedLong($in);
+			$this->worldTemplateId = CommonTypes::getUUID($in);
+		}else{
+			$this->blockPaletteChecksum = LE::readUnsignedLong($in);
+		}
+		$this->enableClientSideChunkGeneration = $protocolId >= ProtocolInfo::PROTOCOL_1_19_20 ?
+			CommonTypes::getBool($in) :
+			false;
 		$this->blockNetworkIdsAreHashes = $protocolId >= ProtocolInfo::PROTOCOL_1_19_80 ?
 			CommonTypes::getBool($in) :
 			false;
@@ -262,10 +269,16 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 		CommonTypes::putString($out, $this->multiplayerCorrelationId);
 		CommonTypes::putBool($out, $this->enableNewInventorySystem);
 		CommonTypes::putString($out, $this->serverSoftwareVersion);
-		$out->writeByteArray($this->playerActorProperties->getEncodedNbt());
-		LE::writeUnsignedLong($out, $this->blockPaletteChecksum);
-		CommonTypes::putUUID($out, $this->worldTemplateId);
-		CommonTypes::putBool($out, $this->enableClientSideChunkGeneration);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_0){
+			$out->writeByteArray($this->playerActorProperties->getEncodedNbt());
+			LE::writeUnsignedLong($out, $this->blockPaletteChecksum);
+			CommonTypes::putUUID($out, $this->worldTemplateId);
+		}else{
+			LE::writeUnsignedLong($out, $this->blockPaletteChecksum);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
+			CommonTypes::putBool($out, $this->enableClientSideChunkGeneration);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_80){
 			CommonTypes::putBool($out, $this->blockNetworkIdsAreHashes);
 		}

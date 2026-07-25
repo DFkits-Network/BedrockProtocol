@@ -374,7 +374,17 @@ final class CommonTypes{
 	}
 
 	/** @throws DataDecodeException */
-	public static function getRecipeIngredient(ByteBufferReader $in) : RecipeIngredient{
+	public static function getRecipeIngredient(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : RecipeIngredient{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_19_30){
+			$id = VarInt::readSignedInt($in);
+			if($id === 0){
+				return new RecipeIngredient(null, 0);
+			}
+			$meta = VarInt::readSignedInt($in);
+			$count = VarInt::readSignedInt($in);
+			return new RecipeIngredient(new IntIdMetaItemDescriptor($id, $meta), $count);
+		}
+
 		$descriptorType = Byte::readUnsigned($in);
 		$descriptor = match($descriptorType){
 			ItemDescriptorType::INT_ID_META => IntIdMetaItemDescriptor::read($in),
@@ -389,8 +399,22 @@ final class CommonTypes{
 		return new RecipeIngredient($descriptor, $count);
 	}
 
-	public static function putRecipeIngredient(ByteBufferWriter $out, RecipeIngredient $ingredient) : void{
+	public static function putRecipeIngredient(ByteBufferWriter $out, RecipeIngredient $ingredient, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
 		$type = $ingredient->getDescriptor();
+
+		if($protocolId < ProtocolInfo::PROTOCOL_1_19_30){
+			if($type === null){
+				VarInt::writeSignedInt($out, 0);
+				return;
+			}
+			if(!$type instanceof IntIdMetaItemDescriptor){
+				throw new \InvalidArgumentException("Only integer ID/meta recipe ingredients are supported before protocol " . ProtocolInfo::PROTOCOL_1_19_30);
+			}
+			VarInt::writeSignedInt($out, $type->getId());
+			VarInt::writeSignedInt($out, $type->getMeta() & 0x7fff);
+			VarInt::writeSignedInt($out, $ingredient->getCount());
+			return;
+		}
 
 		Byte::writeUnsigned($out, $type?->getTypeId() ?? 0);
 		$type?->write($out);

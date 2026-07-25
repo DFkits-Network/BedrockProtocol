@@ -68,8 +68,10 @@ final class UpdateAttribute{
 		$id = CommonTypes::getString($in);
 
 		$modifiers = [];
-		for($j = 0, $modifierCount = VarInt::readUnsignedInt($in); $j < $modifierCount; $j++){
-			$modifiers[] = AttributeModifier::read($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
+			for($j = 0, $modifierCount = VarInt::readUnsignedInt($in); $j < $modifierCount; $j++){
+				$modifiers[] = AttributeModifier::read($in);
+			}
 		}
 
 		return new self($id, $min, $max, $current, $defaultMin ?? $min, $defaultMax ?? $max, $default, $modifiers);
@@ -86,9 +88,11 @@ final class UpdateAttribute{
 		LE::writeFloat($out, $this->default);
 		CommonTypes::putString($out, $this->id);
 
-		VarInt::writeUnsignedInt($out, count($this->modifiers));
-		foreach($this->modifiers as $modifier){
-			$modifier->write($out);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_20){
+			VarInt::writeUnsignedInt($out, count($this->modifiers));
+			foreach($this->modifiers as $modifier){
+				$modifier->write($out);
+			}
 		}
 	}
 }

@@ -124,6 +124,8 @@ interface PacketHandlerInterface{
 
 	public function handleGuiDataPickItem(GuiDataPickItemPacket $packet) : bool;
 
+	public function handleAdventureSettings(AdventureSettingsPacket $packet) : bool;
+
 	public function handleBlockActorData(BlockActorDataPacket $packet) : bool;
 
 	public function handlePlayerInput(PlayerInputPacket $packet) : bool;
@@ -153,6 +155,8 @@ interface PacketHandlerInterface{
 	public function handleRequestChunkRadius(RequestChunkRadiusPacket $packet) : bool;
 
 	public function handleChunkRadiusUpdated(ChunkRadiusUpdatedPacket $packet) : bool;
+
+	public function handleItemFrameDropItem(ItemFrameDropItemPacket $packet) : bool;
 
 	public function handleGameRulesChanged(GameRulesChangedPacket $packet) : bool;
 
@@ -323,6 +327,8 @@ interface PacketHandlerInterface{
 	public function handleCorrectPlayerMovePrediction(CorrectPlayerMovePredictionPacket $packet) : bool;
 
 	public function handleItemRegistry(ItemRegistryPacket $packet) : bool;
+
+	public function handleFilterText(FilterTextPacket $packet) : bool;
 
 	public function handleClientboundDebugRenderer(ClientboundDebugRendererPacket $packet) : bool;
 

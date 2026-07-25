@@ -21,6 +21,7 @@ use pmmp\encoding\DataDecodeException;
 use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use function count;
 
@@ -91,7 +92,9 @@ final class ItemStackRequest{
 		for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
 			$filterStrings[] = CommonTypes::getString($in);
 		}
-		$filterStringCause = LE::readSignedInt($in);
+		$filterStringCause = $protocolId >= ProtocolInfo::PROTOCOL_1_19_50 ?
+			LE::readSignedInt($in) :
+			0;
 		return new self($requestId, $actions, $filterStrings, $filterStringCause);
 	}
 
@@ -106,6 +109,8 @@ final class ItemStackRequest{
 		foreach($this->filterStrings as $string){
 			CommonTypes::putString($out, $string);
 		}
-		LE::writeSignedInt($out, $this->filterStringCause);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_50){
+			LE::writeSignedInt($out, $this->filterStringCause);
+		}
 	}
 }

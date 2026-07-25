@@ -34,6 +34,11 @@ final class ProtocolInfo{
 	/** Actual Minecraft: PE protocol version */
 	public const CURRENT_PROTOCOL = self::PROTOCOL_1_26_30;
 	public const ACCEPTED_PROTOCOL = [
+		self::PROTOCOL_1_18_10,
+		self::PROTOCOL_1_18_30,
+		self::PROTOCOL_1_19_0,
+		self::PROTOCOL_1_19_10,
+		self::PROTOCOL_1_19_20,
 		self::PROTOCOL_1_19_30,
 		self::PROTOCOL_1_19_40,
 		self::PROTOCOL_1_19_50,
@@ -188,6 +193,7 @@ final class ProtocolInfo{
 	public const MAP_INFO_REQUEST_PACKET = 0x44;
 	public const REQUEST_CHUNK_RADIUS_PACKET = 0x45;
 	public const CHUNK_RADIUS_UPDATED_PACKET = 0x46;
+	public const ITEM_FRAME_DROP_ITEM_PACKET = 0x47;
 
 	public const GAME_RULES_CHANGED_PACKET = 0x48;
 	public const CAMERA_PACKET = 0x49;
@@ -277,6 +283,7 @@ final class ProtocolInfo{
 	public const PLAYER_FOG_PACKET = 0xa0;
 	public const CORRECT_PLAYER_MOVE_PREDICTION_PACKET = 0xa1;
 	public const ITEM_REGISTRY_PACKET = 0xa2;
+	public const FILTER_TEXT_PACKET = 0xa3;
 
 	public const CLIENTBOUND_DEBUG_RENDERER_PACKET = 0xa4;
 	public const SYNC_ACTOR_PROPERTY_PACKET = 0xa5;

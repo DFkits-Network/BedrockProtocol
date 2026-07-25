@@ -83,7 +83,7 @@ final class ClientData{
 	public int $GuiScale;
 
 	/** <= ProtocolInfo::PROTOCOL_1_26_20 */
-	public bool $IsEditorMode;
+	public bool $IsEditorMode = false;
 
 	/** @required */
 	public string $LanguageCode;
@@ -171,8 +171,8 @@ final class ClientData{
 	/** <= ProtocolInfo::PROTOCOL_1_21_80 */
 	public bool $ThirdPartyNameOnly;
 
-	/** @required */
-	public bool $TrustedSkin;
+	/** >= ProtocolInfo::PROTOCOL_1_19_20 */
+	public bool $TrustedSkin = false;
 
 	/** @required */
 	public int $UIProfile;
