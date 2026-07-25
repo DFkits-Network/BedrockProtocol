@@ -62,8 +62,10 @@ final class CraftRecipeAutoStackRequestAction extends ItemStackRequestAction{
 			$repetitions2 = Byte::readUnsigned($in); //repetitions property is sent twice, mojang...
 		}
 		$ingredients = [];
-		for($i = 0, $count = Byte::readUnsigned($in); $i < $count; ++$i){
-			$ingredients[] = CommonTypes::getRecipeIngredient($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_40){
+			for($i = 0, $count = Byte::readUnsigned($in); $i < $count; ++$i){
+				$ingredients[] = CommonTypes::getRecipeIngredient($in);
+			}
 		}
 		return new self($recipeId, $repetitions, $repetitions2 ?? 0, $ingredients);
 	}
@@ -74,9 +76,11 @@ final class CraftRecipeAutoStackRequestAction extends ItemStackRequestAction{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
 			Byte::writeUnsigned($out, $this->repetitions2);
 		}
-		Byte::writeUnsigned($out, count($this->ingredients));
-		foreach($this->ingredients as $ingredient){
-			CommonTypes::putRecipeIngredient($out, $ingredient);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_40){
+			Byte::writeUnsigned($out, count($this->ingredients));
+			foreach($this->ingredients as $ingredient){
+				CommonTypes::putRecipeIngredient($out, $ingredient);
+			}
 		}
 	}
 }

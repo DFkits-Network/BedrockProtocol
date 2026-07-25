@@ -34,6 +34,7 @@ use pocketmine\network\mcpe\protocol\types\entity\BlockPosMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\entity\ByteMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\entity\CompoundTagMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\entity\EntityLink;
+use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
 use pocketmine\network\mcpe\protocol\types\entity\FloatMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\entity\IntMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\entity\LongMetadataProperty;
@@ -108,7 +109,7 @@ final class CommonTypes{
 	}
 
 	/** @throws DataDecodeException */
-	public static function getSkin(ByteBufferReader $in) : SkinData{
+	public static function getSkin(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : SkinData{
 		$skinId = self::getString($in);
 		$skinPlayFabId = self::getString($in);
 		$skinResourcePatch = self::getString($in);
@@ -159,7 +160,7 @@ final class CommonTypes{
 		$persona = self::getBool($in);
 		$capeOnClassic = self::getBool($in);
 		$isPrimaryUser = self::getBool($in);
-		$override = self::getBool($in);
+		$override = $protocolId >= ProtocolInfo::PROTOCOL_1_19_63 ? self::getBool($in) : true;
 
 		return new SkinData(
 			$skinId,
@@ -186,7 +187,7 @@ final class CommonTypes{
 		);
 	}
 
-	public static function putSkin(ByteBufferWriter $out, SkinData $skin) : void{
+	public static function putSkin(ByteBufferWriter $out, SkinData $skin, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
 		self::putString($out, $skin->getSkinId());
 		self::putString($out, $skin->getPlayFabId());
 		self::putString($out, $skin->getResourcePatch());
@@ -226,7 +227,9 @@ final class CommonTypes{
 		self::putBool($out, $skin->isPersona());
 		self::putBool($out, $skin->isPersonaCapeOnClassic());
 		self::putBool($out, $skin->isPrimaryUser());
-		self::putBool($out, $skin->isOverride());
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_63){
+			self::putBool($out, $skin->isOverride());
+		}
 	}
 
 	/** @throws DataDecodeException */
@@ -404,17 +407,20 @@ final class CommonTypes{
 	 * @throws PacketDecodeException
 	 * @throws DataDecodeException
 	 */
-	public static function getEntityMetadata(ByteBufferReader $in) : array{
+	public static function getEntityMetadata(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : array{
 		$count = VarInt::readUnsignedInt($in);
 		$data = [];
 		for($i = 0; $i < $count; ++$i){
 			$key = VarInt::readUnsignedInt($in);
+			if($protocolId < ProtocolInfo::PROTOCOL_1_19_40){
+				$key = $key === 120 ? 123 : ($key >= 121 ? $key - 1 : $key);
+			}
 			$type = VarInt::readUnsignedInt($in);
 
 			$data[$key] = self::readMetadataProperty($in, $type);
 		}
 
-		return $data;
+		return EntityMetadataFlags::decode($data, $protocolId);
 	}
 
 	/** @throws DataDecodeException */
@@ -440,9 +446,14 @@ final class CommonTypes{
 	 *
 	 * @phpstan-param array<int, MetadataProperty> $metadata
 	 */
-	public static function putEntityMetadata(ByteBufferWriter $out, array $metadata) : void{
+	public static function putEntityMetadata(ByteBufferWriter $out, array $metadata, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
+		$metadata = EntityMetadataFlags::encode($metadata, $protocolId);
 		VarInt::writeUnsignedInt($out, count($metadata));
 		foreach($metadata as $key => $d){
+			if($protocolId < ProtocolInfo::PROTOCOL_1_19_40){
+				$key = $key >= 120 ? $key + 1 : $key;
+				$key = $key === 124 ? 120 : $key;
+			}
 			VarInt::writeUnsignedInt($out, $key);
 			VarInt::writeUnsignedInt($out, $d->getTypeId());
 			$d->write($out);

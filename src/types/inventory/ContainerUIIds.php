@@ -14,6 +14,11 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types\inventory;
 
+use pmmp\encoding\Byte;
+use pmmp\encoding\ByteBufferReader;
+use pmmp\encoding\ByteBufferWriter;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
+
 final class ContainerUIIds{
 
 	private function __construct(){
@@ -87,4 +92,23 @@ final class ContainerUIIds{
 	public const RECIPE_FOOD_CONTAINER = 64;
 	public const RECIPE_BLOCKS_CONTAINER = 65;
 	public const RECIPE_FURNACE_ITEMS_CONTAINER = 66;
+
+	public static function read(ByteBufferReader $in, int $protocolId) : int{
+		$containerId = Byte::readUnsigned($in);
+		if($protocolId < ProtocolInfo::PROTOCOL_1_19_50 && $containerId >= self::RECIPE_BOOK){
+			$containerId++;
+		}
+		return $containerId;
+	}
+
+	public static function write(ByteBufferWriter $out, int $protocolId, int $containerId) : void{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_19_50){
+			if($containerId > self::RECIPE_BOOK){
+				$containerId--;
+			}elseif($containerId === self::RECIPE_BOOK){
+				throw new \InvalidArgumentException("Invalid container ID for protocol version " . $protocolId);
+			}
+		}
+		Byte::writeUnsigned($out, $containerId);
+	}
 }

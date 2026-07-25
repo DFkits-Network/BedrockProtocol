@@ -205,7 +205,9 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 		$this->blockPaletteChecksum = LE::readUnsignedLong($in);
 		$this->worldTemplateId = CommonTypes::getUUID($in);
 		$this->enableClientSideChunkGeneration = CommonTypes::getBool($in);
-		$this->blockNetworkIdsAreHashes = CommonTypes::getBool($in);
+		$this->blockNetworkIdsAreHashes = $protocolId >= ProtocolInfo::PROTOCOL_1_19_80 ?
+			CommonTypes::getBool($in) :
+			false;
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_100 && $protocolId <= ProtocolInfo::PROTOCOL_1_21_124){
 			$this->enableTickDeathSystems = CommonTypes::getBool($in);
 		}
@@ -264,7 +266,9 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 		LE::writeUnsignedLong($out, $this->blockPaletteChecksum);
 		CommonTypes::putUUID($out, $this->worldTemplateId);
 		CommonTypes::putBool($out, $this->enableClientSideChunkGeneration);
-		CommonTypes::putBool($out, $this->blockNetworkIdsAreHashes);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_80){
+			CommonTypes::putBool($out, $this->blockNetworkIdsAreHashes);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_100 && $protocolId <= ProtocolInfo::PROTOCOL_1_21_124){
 			CommonTypes::putBool($out, $this->enableTickDeathSystems);
 		}

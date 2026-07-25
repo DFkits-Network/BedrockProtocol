@@ -67,7 +67,7 @@ class AddItemActorPacket extends DataPacket implements ClientboundPacket{
 		$this->item = CommonTypes::getItemStackWrapper($in);
 		$this->position = CommonTypes::getVector3($in);
 		$this->motion = CommonTypes::getVector3($in);
-		$this->metadata = CommonTypes::getEntityMetadata($in);
+		$this->metadata = CommonTypes::getEntityMetadata($in, $protocolId);
 		$this->isFromFishing = CommonTypes::getBool($in);
 	}
 
@@ -77,7 +77,7 @@ class AddItemActorPacket extends DataPacket implements ClientboundPacket{
 		CommonTypes::putItemStackWrapper($out, $this->item);
 		CommonTypes::putVector3($out, $this->position);
 		CommonTypes::putVector3Nullable($out, $this->motion);
-		CommonTypes::putEntityMetadata($out, $this->metadata);
+		CommonTypes::putEntityMetadata($out, $this->metadata, $protocolId);
 		CommonTypes::putBool($out, $this->isFromFishing);
 	}
 

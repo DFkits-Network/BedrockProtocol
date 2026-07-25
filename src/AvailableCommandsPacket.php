@@ -172,6 +172,36 @@ final class AvailableCommandsPacket extends DataPacket implements ClientboundPac
 	}
 
 	public static function convertArg(int $protocolId, int $type) : int{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_19_80){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_19_70){
+				return match($type){
+					self::ARG_TYPE_EQUIPMENT_SLOT => 0x26,
+					self::ARG_TYPE_STRING => 0x27,
+					self::ARG_TYPE_INT_POSITION => 0x2f,
+					self::ARG_TYPE_POSITION => 0x30,
+					self::ARG_TYPE_MESSAGE => 0x32,
+					self::ARG_TYPE_RAWTEXT => 0x35,
+					self::ARG_TYPE_JSON => 0x39,
+					self::ARG_TYPE_BLOCK_STATES => 0x43,
+					self::ARG_TYPE_COMMAND => 0x45,
+					default => $type,
+				};
+			}
+
+			return match($type){
+				self::ARG_TYPE_EQUIPMENT_SLOT => 0x26,
+				self::ARG_TYPE_STRING => 0x27,
+				self::ARG_TYPE_INT_POSITION => 0x2f,
+				self::ARG_TYPE_POSITION => 0x30,
+				self::ARG_TYPE_MESSAGE => 0x33,
+				self::ARG_TYPE_RAWTEXT => 0x35,
+				self::ARG_TYPE_JSON => 0x39,
+				self::ARG_TYPE_BLOCK_STATES => 0x43,
+				self::ARG_TYPE_COMMAND => 0x46,
+				default => $type,
+			};
+		}
+
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_20_60){
 			return match($type){
 				self::ARG_TYPE_EQUIPMENT_SLOT => 43,

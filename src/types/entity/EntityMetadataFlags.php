@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types\entity;
 
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
+
 final class EntityMetadataFlags{
 
 	private function __construct(){
@@ -149,4 +151,74 @@ final class EntityMetadataFlags{
 	public const USES_LEGACY_FRICTION = 127;
 
 	public const NUMBER_OF_FLAGS = 128;
+
+	/**
+	 * @param MetadataProperty[] $metadata
+	 * @phpstan-param array<int, MetadataProperty> $metadata
+	 *
+	 * @return MetadataProperty[]
+	 * @phpstan-return array<int, MetadataProperty>
+	 */
+	public static function encode(array $metadata, int $protocolId) : array{
+		if($protocolId <= ProtocolInfo::PROTOCOL_1_19_40){
+			/** @var LongMetadataProperty $flag1Property */
+			$flag1Property = $metadata[EntityMetadataProperties::FLAGS] ?? new LongMetadataProperty(0);
+			/** @var LongMetadataProperty $flag2Property */
+			$flag2Property = $metadata[EntityMetadataProperties::FLAGS2] ?? new LongMetadataProperty(0);
+			$flag1 = $flag1Property->getValue();
+			$flag2 = $flag2Property->getValue();
+
+			if($flag1 === 0 && $flag2 === 0){
+				return $metadata;
+			}
+
+			$newFlag1 = $flag1 & ~(~0 << (self::CAN_DASH - 1));
+			$lastHalf = $flag1 & (~0 << self::CAN_DASH);
+			$lastHalf >>= 1;
+			$lastHalf &= PHP_INT_MAX;
+			$newFlag1 |= $lastHalf;
+
+			if($flag2 !== 0){
+				$newFlag1 ^= ($flag2 & 1) << 63;
+				$flag2 >>= 1;
+				$flag2 &= PHP_INT_MAX;
+				$metadata[EntityMetadataProperties::FLAGS2] = new LongMetadataProperty($flag2);
+			}
+
+			$metadata[EntityMetadataProperties::FLAGS] = new LongMetadataProperty($newFlag1);
+		}
+
+		return $metadata;
+	}
+
+	/**
+	 * @param MetadataProperty[] $metadata
+	 * @phpstan-param array<int, MetadataProperty> $metadata
+	 *
+	 * @return MetadataProperty[]
+	 * @phpstan-return array<int, MetadataProperty>
+	 */
+	public static function decode(array $metadata, int $protocolId) : array{
+		if($protocolId <= ProtocolInfo::PROTOCOL_1_19_40){
+			/** @var LongMetadataProperty $flag1Property */
+			$flag1Property = $metadata[EntityMetadataProperties::FLAGS] ?? new LongMetadataProperty(0);
+			/** @var LongMetadataProperty $flag2Property */
+			$flag2Property = $metadata[EntityMetadataProperties::FLAGS2] ?? new LongMetadataProperty(0);
+			$flag1 = $flag1Property->getValue();
+			$flag2 = $flag2Property->getValue();
+
+			$flag2 <<= 1;
+			$flag2 |= (($flag1 >> 63) & 1);
+
+			$newFlag1 = $flag1 & ~(~0 << (self::CAN_DASH - 1));
+			$lastHalf = $flag1 & (~0 << (self::CAN_DASH - 1));
+			$lastHalf <<= 1;
+			$newFlag1 |= $lastHalf;
+
+			$metadata[EntityMetadataProperties::FLAGS2] = new LongMetadataProperty($flag2);
+			$metadata[EntityMetadataProperties::FLAGS] = new LongMetadataProperty($newFlag1);
+		}
+
+		return $metadata;
+	}
 }

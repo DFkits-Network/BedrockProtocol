@@ -16,6 +16,7 @@ namespace pocketmine\network\mcpe\protocol\types\recipe;
 
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 
@@ -24,7 +25,7 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 	public function __construct(
 		int $typeId,
 		private string $recipeId,
-		private RecipeIngredient $template,
+		private ?RecipeIngredient $template,
 		private RecipeIngredient $input,
 		private RecipeIngredient $addition,
 		private ItemStack $output,
@@ -36,7 +37,7 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 
 	public function getRecipeId() : string{ return $this->recipeId; }
 
-	public function getTemplate() : RecipeIngredient{ return $this->template; }
+	public function getTemplate() : ?RecipeIngredient{ return $this->template; }
 
 	public function getInput() : RecipeIngredient{ return $this->input; }
 
@@ -48,9 +49,11 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 
 	public function getRecipeNetId() : int{ return $this->recipeNetId; }
 
-	public static function decode(int $typeId, ByteBufferReader $in) : self{
+	public static function decode(int $typeId, ByteBufferReader $in, int $protocolId) : self{
 		$recipeId = CommonTypes::getString($in);
-		$template = CommonTypes::getRecipeIngredient($in);
+		$template = $protocolId >= ProtocolInfo::PROTOCOL_1_19_80 ?
+			CommonTypes::getRecipeIngredient($in) :
+			null;
 		$input = CommonTypes::getRecipeIngredient($in);
 		$addition = CommonTypes::getRecipeIngredient($in);
 		$output = CommonTypes::getItemStackWithoutStackId($in);
@@ -71,7 +74,12 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 
 	public function encode(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->recipeId);
-		CommonTypes::putRecipeIngredient($out, $this->template);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_80){
+			if($this->template === null){
+				throw new \InvalidArgumentException("SmithingTransformRecipe template cannot be null");
+			}
+			CommonTypes::putRecipeIngredient($out, $this->template);
+		}
 		CommonTypes::putRecipeIngredient($out, $this->input);
 		CommonTypes::putRecipeIngredient($out, $this->addition);
 		CommonTypes::putItemStackWithoutStackId($out, $this->output);

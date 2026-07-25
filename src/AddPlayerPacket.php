@@ -114,8 +114,10 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		$this->headYaw = LE::readFloat($in);
 		$this->item = CommonTypes::getItemStackWrapper($in);
 		$this->gameMode = VarInt::readSignedInt($in);
-		$this->metadata = CommonTypes::getEntityMetadata($in);
-		$this->syncedProperties = PropertySyncData::read($in);
+		$this->metadata = CommonTypes::getEntityMetadata($in, $protocolId);
+		$this->syncedProperties = $protocolId >= ProtocolInfo::PROTOCOL_1_19_40 ?
+			PropertySyncData::read($in) :
+			new PropertySyncData([], []);
 
 		$this->abilitiesPacket = new UpdateAbilitiesPacket();
 		$this->abilitiesPacket->decodePayload($in, $protocolId);
@@ -141,8 +143,10 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		LE::writeFloat($out, $this->headYaw);
 		CommonTypes::putItemStackWrapper($out, $this->item);
 		VarInt::writeSignedInt($out, $this->gameMode);
-		CommonTypes::putEntityMetadata($out, $this->metadata);
-		$this->syncedProperties->write($out);
+		CommonTypes::putEntityMetadata($out, $this->metadata, $protocolId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_40){
+			$this->syncedProperties->write($out);
+		}
 
 		$this->abilitiesPacket->encodePayload($out, $protocolId);
 

@@ -26,8 +26,8 @@ class CommandRequestPacket extends DataPacket implements ServerboundPacket{
 	public string $command;
 	public CommandOriginData $originData;
 	public bool $isInternal;
-	public string $version;
-	public int $oldVersion;
+	public string $version = "";
+	public int $oldVersion = 0;
 
 	/**
 	 * @generate-create-func
@@ -48,7 +48,7 @@ class CommandRequestPacket extends DataPacket implements ServerboundPacket{
 		$this->isInternal = CommonTypes::getBool($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_130){
 			$this->version = CommonTypes::getString($in);
-		}else{
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_19_60){
 			$this->oldVersion = VarInt::readSignedInt($in);
 		}
 	}
@@ -59,7 +59,7 @@ class CommandRequestPacket extends DataPacket implements ServerboundPacket{
 		CommonTypes::putBool($out, $this->isInternal);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_130){
 			CommonTypes::putString($out, $this->version);
-		}else{
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_19_60){
 			VarInt::writeSignedInt($out, $this->oldVersion);
 		}
 	}
