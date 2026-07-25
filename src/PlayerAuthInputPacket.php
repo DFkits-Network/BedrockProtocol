@@ -32,6 +32,7 @@ use pocketmine\network\mcpe\protocol\types\PlayerAuthInputVehicleInfo;
 use pocketmine\network\mcpe\protocol\types\PlayerBlockAction;
 use pocketmine\network\mcpe\protocol\types\PlayerBlockActionStopBreak;
 use pocketmine\network\mcpe\protocol\types\PlayerBlockActionWithBlockInfo;
+use pocketmine\network\mcpe\protocol\types\PlayerBlockActionWithoutBlockInfo;
 use pocketmine\network\mcpe\protocol\types\PlayMode;
 use function assert;
 use function count;
@@ -314,6 +315,7 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 					$this->blockActions[] = match(true){
 						PlayerBlockActionWithBlockInfo::isValidActionType($actionType) => PlayerBlockActionWithBlockInfo::read($in, $actionType),
 						$actionType === PlayerAction::STOP_BREAK => new PlayerBlockActionStopBreak(),
+						PlayerBlockActionWithoutBlockInfo::isValidActionType($actionType) => new PlayerBlockActionWithoutBlockInfo($actionType),
 						default => throw new PacketDecodeException("Unexpected block action type $actionType")
 					};
 				}

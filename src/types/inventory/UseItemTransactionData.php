@@ -93,6 +93,8 @@ class UseItemTransactionData extends TransactionData{
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
 			$this->triggerType = TriggerType::fromPacket($protocolId >= ProtocolInfo::PROTOCOL_1_26_30 ? Byte::readUnsigned($in) : VarInt::readUnsignedInt($in));
+		}else{
+			$this->triggerType = TriggerType::UNKNOWN;
 		}
 		$this->blockPosition = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
@@ -113,7 +115,12 @@ class UseItemTransactionData extends TransactionData{
 			$this->clientInteractPrediction = PredictedResult::fromPacket($protocolId >= ProtocolInfo::PROTOCOL_1_26_30 ? Byte::readUnsigned($in) : VarInt::readUnsignedInt($in));
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_10){
 				$this->clientCooldownState = Byte::readUnsigned($in);
+			}else{
+				$this->clientCooldownState = 0;
 			}
+		}else{
+			$this->clientInteractPrediction = PredictedResult::FAILURE;
+			$this->clientCooldownState = 0;
 		}
 	}
 
