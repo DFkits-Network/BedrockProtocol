@@ -100,7 +100,9 @@ class MovePlayerPacket extends DataPacket implements ClientboundPacket, Serverbo
 			$this->teleportCause = LE::readSignedInt($in);
 			$this->teleportItem = LE::readSignedInt($in);
 		}
-		$this->tick = VarInt::readUnsignedLong($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+			$this->tick = VarInt::readUnsignedLong($in);
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
@@ -116,7 +118,9 @@ class MovePlayerPacket extends DataPacket implements ClientboundPacket, Serverbo
 			LE::writeSignedInt($out, $this->teleportCause);
 			LE::writeSignedInt($out, $this->teleportItem);
 		}
-		VarInt::writeUnsignedLong($out, $this->tick);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+			VarInt::writeUnsignedLong($out, $this->tick);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

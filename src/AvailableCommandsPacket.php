@@ -172,6 +172,42 @@ final class AvailableCommandsPacket extends DataPacket implements ClientboundPac
 	}
 
 	public static function convertArg(int $protocolId, int $type) : int{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_13_0){
+			return match($type){
+				self::ARG_TYPE_FLOAT => 0x02,
+				self::ARG_TYPE_VALUE => 0x03,
+				self::ARG_TYPE_WILDCARD_INT => 0x04,
+				self::ARG_TYPE_OPERATOR => 0x05,
+				self::ARG_TYPE_TARGET => 0x06,
+				self::ARG_TYPE_WILDCARD_TARGET => 0x07,
+				self::ARG_TYPE_FILEPATH => 0x0e,
+				self::ARG_TYPE_STRING => 0x1b,
+				self::ARG_TYPE_POSITION => 0x1d,
+				self::ARG_TYPE_MESSAGE => 0x20,
+				self::ARG_TYPE_RAWTEXT => 0x22,
+				self::ARG_TYPE_JSON => 0x25,
+				self::ARG_TYPE_COMMAND => 0x2c,
+				default => $type,
+			};
+		}
+		if($protocolId < ProtocolInfo::PROTOCOL_1_16_100){
+			return match($type){
+				self::ARG_TYPE_FLOAT => 0x02,
+				self::ARG_TYPE_VALUE => 0x03,
+				self::ARG_TYPE_WILDCARD_INT => 0x04,
+				self::ARG_TYPE_OPERATOR => 0x05,
+				self::ARG_TYPE_TARGET => 0x06,
+				self::ARG_TYPE_WILDCARD_TARGET => 0x07,
+				self::ARG_TYPE_FILEPATH => 0x0e,
+				self::ARG_TYPE_STRING => 0x1d,
+				self::ARG_TYPE_POSITION => 0x26,
+				self::ARG_TYPE_MESSAGE => 0x29,
+				self::ARG_TYPE_RAWTEXT => 0x2b,
+				self::ARG_TYPE_JSON => 0x2f,
+				self::ARG_TYPE_COMMAND => 0x36,
+				default => $type,
+			};
+		}
 		if($protocolId < ProtocolInfo::PROTOCOL_1_16_210){
 			return match($type){
 				self::ARG_TYPE_FLOAT => 0x02,

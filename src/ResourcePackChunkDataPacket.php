@@ -18,6 +18,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use function strlen;
 
 class ResourcePackChunkDataPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::RESOURCE_PACK_CHUNK_DATA_PACKET;
@@ -43,14 +44,21 @@ class ResourcePackChunkDataPacket extends DataPacket implements ClientboundPacke
 		$this->packId = CommonTypes::getString($in);
 		$this->chunkIndex = LE::readUnsignedInt($in);
 		$this->offset = LE::readUnsignedLong($in);
-		$this->data = CommonTypes::getString($in);
+		$this->data = $protocolId >= ProtocolInfo::PROTOCOL_1_13_0 ?
+			CommonTypes::getString($in) :
+			$in->readByteArray(LE::readUnsignedInt($in));
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->packId);
 		LE::writeUnsignedInt($out, $this->chunkIndex);
 		LE::writeUnsignedLong($out, $this->offset);
-		CommonTypes::putString($out, $this->data);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_13_0){
+			CommonTypes::putString($out, $this->data);
+		}else{
+			LE::writeUnsignedInt($out, strlen($this->data));
+			$out->writeByteArray($this->data);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

@@ -69,17 +69,25 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 				$entry->uuid = CommonTypes::getUUID($in);
 				$entry->actorUniqueId = CommonTypes::getActorUniqueId($in);
 				$entry->username = CommonTypes::getString($in);
-				$entry->xboxUserId = CommonTypes::getString($in);
-				$entry->platformChatId = CommonTypes::getString($in);
-				$entry->buildPlatform = LE::readSignedInt($in);
-				$entry->skinData = CommonTypes::getSkin($in, $protocolId);
-				$entry->isTeacher = CommonTypes::getBool($in);
-				$entry->isHost = CommonTypes::getBool($in);
-				if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
-					$entry->isSubClient = CommonTypes::getBool($in);
-					if($protocolId >= ProtocolInfo::PROTOCOL_1_21_80){
-						$entry->color = Color::fromARGB(LE::readUnsignedInt($in));
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_13_0){
+					$entry->xboxUserId = CommonTypes::getString($in);
+					$entry->platformChatId = CommonTypes::getString($in);
+					$entry->buildPlatform = LE::readSignedInt($in);
+					$entry->skinData = CommonTypes::getSkin($in, $protocolId);
+					$entry->isTeacher = CommonTypes::getBool($in);
+					$entry->isHost = CommonTypes::getBool($in);
+					if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
+						$entry->isSubClient = CommonTypes::getBool($in);
+						if($protocolId >= ProtocolInfo::PROTOCOL_1_21_80){
+							$entry->color = Color::fromARGB(LE::readUnsignedInt($in));
+						}
 					}
+				}else{
+					$skinId = CommonTypes::getString($in);
+					$entry->skinData = CommonTypes::getSkin($in, $protocolId);
+					$entry->skinData->setSkinId($skinId);
+					$entry->xboxUserId = CommonTypes::getString($in);
+					$entry->platformChatId = CommonTypes::getString($in);
 				}
 			}else{
 				$entry->uuid = CommonTypes::getUUID($in);
@@ -87,7 +95,7 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 
 			$this->entries[$i] = $entry;
 		}
-		if($this->type === self::TYPE_ADD){
+		if($this->type === self::TYPE_ADD && $protocolId >= ProtocolInfo::PROTOCOL_1_14_60){
 			for($i = 0; $i < $count; ++$i){
 				$this->entries[$i]->skinData->setVerified(CommonTypes::getBool($in));
 			}
@@ -102,23 +110,30 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 				CommonTypes::putUUID($out, $entry->uuid);
 				CommonTypes::putActorUniqueId($out, $entry->actorUniqueId);
 				CommonTypes::putString($out, $entry->username);
-				CommonTypes::putString($out, $entry->xboxUserId);
-				CommonTypes::putString($out, $entry->platformChatId);
-				LE::writeSignedInt($out, $entry->buildPlatform);
-				CommonTypes::putSkin($out, $entry->skinData, $protocolId);
-				CommonTypes::putBool($out, $entry->isTeacher);
-				CommonTypes::putBool($out, $entry->isHost);
-				if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
-					CommonTypes::putBool($out, $entry->isSubClient);
-					if($protocolId >= ProtocolInfo::PROTOCOL_1_21_80){
-						LE::writeUnsignedInt($out, ($entry->color ?? new Color(255, 255, 255))->toARGB());
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_13_0){
+					CommonTypes::putString($out, $entry->xboxUserId);
+					CommonTypes::putString($out, $entry->platformChatId);
+					LE::writeSignedInt($out, $entry->buildPlatform);
+					CommonTypes::putSkin($out, $entry->skinData, $protocolId);
+					CommonTypes::putBool($out, $entry->isTeacher);
+					CommonTypes::putBool($out, $entry->isHost);
+					if($protocolId >= ProtocolInfo::PROTOCOL_1_20_60){
+						CommonTypes::putBool($out, $entry->isSubClient);
+						if($protocolId >= ProtocolInfo::PROTOCOL_1_21_80){
+							LE::writeUnsignedInt($out, ($entry->color ?? new Color(255, 255, 255))->toARGB());
+						}
 					}
+				}else{
+					CommonTypes::putString($out, $entry->skinData->getSkinId());
+					CommonTypes::putSkin($out, $entry->skinData, $protocolId);
+					CommonTypes::putString($out, $entry->xboxUserId);
+					CommonTypes::putString($out, $entry->platformChatId);
 				}
 			}else{
 				CommonTypes::putUUID($out, $entry->uuid);
 			}
 		}
-		if($this->type === self::TYPE_ADD){
+		if($this->type === self::TYPE_ADD && $protocolId >= ProtocolInfo::PROTOCOL_1_14_60){
 			foreach($this->entries as $entry){
 				CommonTypes::putBool($out, $entry->skinData->isVerified());
 			}

@@ -95,20 +95,24 @@ class EducationSettingsPacket extends DataPacket implements ClientboundPacket{
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->codeBuilderDefaultUri = CommonTypes::getString($in);
-		$this->codeBuilderTitle = CommonTypes::getString($in);
-		$this->canResizeCodeBuilder = CommonTypes::getBool($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
-			$this->disableLegacyTitleBar = CommonTypes::getBool($in);
-			$this->postProcessFilter = CommonTypes::getString($in);
-			$this->screenshotBorderResourcePath = CommonTypes::getString($in);
-			$this->agentCapabilities = CommonTypes::readOptional($in, EducationSettingsAgentCapabilities::read(...));
-		}else{
-			$this->disableLegacyTitleBar = false;
-			$this->postProcessFilter = "";
-			$this->screenshotBorderResourcePath = "";
-			$this->agentCapabilities = null;
+		$this->codeBuilderTitle = "";
+		$this->canResizeCodeBuilder = false;
+		$this->disableLegacyTitleBar = false;
+		$this->postProcessFilter = "";
+		$this->screenshotBorderResourcePath = "";
+		$this->agentCapabilities = null;
+		$this->codeBuilderOverrideUri = null;
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
+			$this->codeBuilderTitle = CommonTypes::getString($in);
+			$this->canResizeCodeBuilder = CommonTypes::getBool($in);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+				$this->disableLegacyTitleBar = CommonTypes::getBool($in);
+				$this->postProcessFilter = CommonTypes::getString($in);
+				$this->screenshotBorderResourcePath = CommonTypes::getString($in);
+				$this->agentCapabilities = CommonTypes::readOptional($in, EducationSettingsAgentCapabilities::read(...));
+			}
+			$this->codeBuilderOverrideUri = CommonTypes::readOptional($in, CommonTypes::getString(...));
 		}
-		$this->codeBuilderOverrideUri = CommonTypes::readOptional($in, CommonTypes::getString(...));
 		$this->hasQuiz = CommonTypes::getBool($in);
 		$this->linkSettings = $protocolId >= ProtocolInfo::PROTOCOL_1_17_30 ?
 			CommonTypes::readOptional($in, EducationSettingsExternalLinkSettings::read(...)) :
@@ -117,15 +121,17 @@ class EducationSettingsPacket extends DataPacket implements ClientboundPacket{
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->codeBuilderDefaultUri);
-		CommonTypes::putString($out, $this->codeBuilderTitle);
-		CommonTypes::putBool($out, $this->canResizeCodeBuilder);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
-			CommonTypes::putBool($out, $this->disableLegacyTitleBar);
-			CommonTypes::putString($out, $this->postProcessFilter);
-			CommonTypes::putString($out, $this->screenshotBorderResourcePath);
-			CommonTypes::writeOptional($out, $this->agentCapabilities, fn(ByteBufferWriter $out, EducationSettingsAgentCapabilities $v) => $v->write($out));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
+			CommonTypes::putString($out, $this->codeBuilderTitle);
+			CommonTypes::putBool($out, $this->canResizeCodeBuilder);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
+				CommonTypes::putBool($out, $this->disableLegacyTitleBar);
+				CommonTypes::putString($out, $this->postProcessFilter);
+				CommonTypes::putString($out, $this->screenshotBorderResourcePath);
+				CommonTypes::writeOptional($out, $this->agentCapabilities, fn(ByteBufferWriter $out, EducationSettingsAgentCapabilities $v) => $v->write($out));
+			}
+			CommonTypes::writeOptional($out, $this->codeBuilderOverrideUri, CommonTypes::putString(...));
 		}
-		CommonTypes::writeOptional($out, $this->codeBuilderOverrideUri, CommonTypes::putString(...));
 		CommonTypes::putBool($out, $this->hasQuiz);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_30){
 			CommonTypes::writeOptional($out, $this->linkSettings, fn(ByteBufferWriter $out, EducationSettingsExternalLinkSettings $v) => $v->write($out));

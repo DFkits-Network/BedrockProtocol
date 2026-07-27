@@ -74,10 +74,17 @@ use function substr;
 
 final class CommonTypes{
 
-	private const LEGACY_SHIELD_RUNTIME_ID = 355;
+	private const LEGACY_SHIELD_RUNTIME_ID = 513;
+	private const MODERN_SHIELD_RUNTIME_ID = 355;
 
 	private function __construct(){
 		//NOOP
+	}
+
+	private static function isShieldRuntimeId(int $id, int $protocolId) : bool{
+		return $id === ($protocolId >= ProtocolInfo::PROTOCOL_1_16_100 ?
+			self::MODERN_SHIELD_RUNTIME_ID :
+			self::LEGACY_SHIELD_RUNTIME_ID);
 	}
 
 	/** @throws DataDecodeException */
@@ -115,21 +122,47 @@ final class CommonTypes{
 
 	/** @throws DataDecodeException */
 	public static function getSkin(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : SkinData{
-		$skinId = self::getString($in);
+		$hasModernSkinFormat = $protocolId >= ProtocolInfo::PROTOCOL_1_13_0;
+		$skinId = $hasModernSkinFormat ? self::getString($in) : "";
 		$skinPlayFabId = $protocolId >= ProtocolInfo::PROTOCOL_1_16_210 ? self::getString($in) : "";
-		$skinResourcePatch = self::getString($in);
-		$skinData = self::getSkinImage($in);
-		$animationCount = LE::readUnsignedInt($in);
+		$skinResourcePatch = $hasModernSkinFormat ? self::getString($in) : null;
+		$skinData = self::getSkinImage($in, $protocolId);
 		$animations = [];
-		for($i = 0; $i < $animationCount; ++$i){
-			$skinImage = self::getSkinImage($in);
-			$animationType = LE::readUnsignedInt($in);
-			$animationFrames = LE::readFloat($in);
-			$expressionType = LE::readUnsignedInt($in);
-			$animations[] = new SkinAnimation($skinImage, $animationType, $animationFrames, $expressionType);
+		$capeData = new SkinImage(0, 0, "");
+		if($hasModernSkinFormat){
+			$animationCount = LE::readUnsignedInt($in);
+			for($i = 0; $i < $animationCount; ++$i){
+				$skinImage = self::getSkinImage($in, $protocolId);
+				$animationType = LE::readUnsignedInt($in);
+				$animationFrames = LE::readFloat($in);
+				$expressionType = $protocolId >= ProtocolInfo::PROTOCOL_1_16_100 ? LE::readUnsignedInt($in) : 0;
+				$animations[] = new SkinAnimation($skinImage, $animationType, $animationFrames, $expressionType);
+			}
+			$capeData = self::getSkinImage($in, $protocolId);
+		}else{
+			$capeRawData = self::getString($in);
+			if($capeRawData !== ""){
+				try{
+				$capeData = SkinImage::fromLegacy($capeRawData);
+				}catch(\InvalidArgumentException $e){
+					throw new PacketDecodeException($e->getMessage(), 0, $e);
+				}
+			}
+			$geometryName = self::getString($in);
 		}
-		$capeData = self::getSkinImage($in);
 		$geometryData = self::getString($in);
+		if(!$hasModernSkinFormat){
+			return new SkinData(
+				$skinId,
+				"",
+				null,
+				$skinData,
+				capeImage: $capeData,
+				geometryData: $geometryData,
+				premium: self::getBool($in),
+				geometryName: $geometryName,
+			);
+		}
 		$hasModernSkinBooleans = $protocolId >= ProtocolInfo::PROTOCOL_1_17_30;
 		$geometryDataVersion = $hasModernSkinBooleans ? self::getString($in) : ProtocolInfo::MINECRAFT_VERSION_NETWORK;
 		$animationData = self::getString($in);
@@ -140,31 +173,30 @@ final class CommonTypes{
 		}
 		$capeId = self::getString($in);
 		$fullSkinId = self::getString($in);
-		$armSize = self::getString($in);
-		$skinColor = self::getString($in);
-		$personaPieceCount = LE::readUnsignedInt($in);
 		$personaPieces = [];
-		for($i = 0; $i < $personaPieceCount; ++$i){
-			$pieceId = self::getString($in);
-			$pieceType = self::getString($in);
-			$packId = self::getString($in);
-			$isDefaultPiece = self::getBool($in);
-			$productId = self::getString($in);
-			$personaPieces[] = new PersonaSkinPiece($pieceId, $pieceType, $packId, $isDefaultPiece, $productId);
-		}
-		$pieceTintColorCount = LE::readUnsignedInt($in);
 		$pieceTintColors = [];
-		for($i = 0; $i < $pieceTintColorCount; ++$i){
-			$pieceType = self::getString($in);
-			$colorCount = LE::readUnsignedInt($in);
-			$colors = [];
-			for($j = 0; $j < $colorCount; ++$j){
-				$colors[] = self::getString($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_14_60){
+			$armSize = self::getString($in);
+			$skinColor = self::getString($in);
+			$personaPieceCount = LE::readUnsignedInt($in);
+			for($i = 0; $i < $personaPieceCount; ++$i){
+				$pieceId = self::getString($in);
+				$pieceType = self::getString($in);
+				$packId = self::getString($in);
+				$isDefaultPiece = self::getBool($in);
+				$productId = self::getString($in);
+				$personaPieces[] = new PersonaSkinPiece($pieceId, $pieceType, $packId, $isDefaultPiece, $productId);
 			}
-			$pieceTintColors[] = new PersonaPieceTintColor(
-				$pieceType,
-				$colors
-			);
+			$pieceTintColorCount = LE::readUnsignedInt($in);
+			for($i = 0; $i < $pieceTintColorCount; ++$i){
+				$pieceType = self::getString($in);
+				$colorCount = LE::readUnsignedInt($in);
+				$colors = [];
+				for($j = 0; $j < $colorCount; ++$j){
+					$colors[] = self::getString($in);
+				}
+				$pieceTintColors[] = new PersonaPieceTintColor($pieceType, $colors);
+			}
 		}
 
 		if($hasModernSkinBooleans){
@@ -189,8 +221,8 @@ final class CommonTypes{
 			$animationData,
 			$capeId,
 			$fullSkinId,
-			$armSize,
-			$skinColor,
+			$armSize ?? "",
+			$skinColor ?? "",
 			$personaPieces,
 			$pieceTintColors,
 			true,
@@ -203,21 +235,35 @@ final class CommonTypes{
 	}
 
 	public static function putSkin(ByteBufferWriter $out, SkinData $skin, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
-		self::putString($out, $skin->getSkinId());
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_210){
-			self::putString($out, $skin->getPlayFabId());
+		$hasModernSkinFormat = $protocolId >= ProtocolInfo::PROTOCOL_1_13_0;
+		if($hasModernSkinFormat){
+			self::putString($out, $skin->getSkinId());
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_16_210){
+				self::putString($out, $skin->getPlayFabId());
+			}
+			self::putString($out, $skin->getResourcePatch());
 		}
-		self::putString($out, $skin->getResourcePatch());
-		self::putSkinImage($out, $skin->getSkinImage());
-		LE::writeUnsignedInt($out, count($skin->getAnimations()));
-		foreach($skin->getAnimations() as $animation){
-			self::putSkinImage($out, $animation->getImage());
-			LE::writeUnsignedInt($out, $animation->getType());
-			LE::writeFloat($out, $animation->getFrames());
-			LE::writeUnsignedInt($out, $animation->getExpressionType());
+		self::putSkinImage($out, $skin->getSkinImage(), $protocolId);
+		if($hasModernSkinFormat){
+			LE::writeUnsignedInt($out, count($skin->getAnimations()));
+			foreach($skin->getAnimations() as $animation){
+				self::putSkinImage($out, $animation->getImage(), $protocolId);
+				LE::writeUnsignedInt($out, $animation->getType());
+				LE::writeFloat($out, $animation->getFrames());
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+					LE::writeUnsignedInt($out, $animation->getExpressionType());
+				}
+			}
 		}
-		self::putSkinImage($out, $skin->getCapeImage());
+		self::putSkinImage($out, $skin->getCapeImage(), $protocolId);
+		if(!$hasModernSkinFormat){
+			self::putString($out, $skin->getGeometryName());
+		}
 		self::putString($out, $skin->getGeometryData());
+		if(!$hasModernSkinFormat){
+			self::putBool($out, $skin->isPremium());
+			return;
+		}
 		$hasModernSkinBooleans = $protocolId >= ProtocolInfo::PROTOCOL_1_17_30;
 		if($hasModernSkinBooleans){
 			self::putString($out, $skin->getGeometryDataEngineVersion());
@@ -230,22 +276,24 @@ final class CommonTypes{
 		}
 		self::putString($out, $skin->getCapeId());
 		self::putString($out, $skin->getFullSkinId());
-		self::putString($out, $skin->getArmSize());
-		self::putString($out, $skin->getSkinColor());
-		LE::writeUnsignedInt($out, count($skin->getPersonaPieces()));
-		foreach($skin->getPersonaPieces() as $piece){
-			self::putString($out, $piece->getPieceId());
-			self::putString($out, $piece->getPieceType());
-			self::putString($out, $piece->getPackId());
-			self::putBool($out, $piece->isDefaultPiece());
-			self::putString($out, $piece->getProductId());
-		}
-		LE::writeUnsignedInt($out, count($skin->getPieceTintColors()));
-		foreach($skin->getPieceTintColors() as $tint){
-			self::putString($out, $tint->getPieceType());
-			LE::writeUnsignedInt($out, count($tint->getColors()));
-			foreach($tint->getColors() as $color){
-				self::putString($out, $color);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_14_60){
+			self::putString($out, $skin->getArmSize());
+			self::putString($out, $skin->getSkinColor());
+			LE::writeUnsignedInt($out, count($skin->getPersonaPieces()));
+			foreach($skin->getPersonaPieces() as $piece){
+				self::putString($out, $piece->getPieceId());
+				self::putString($out, $piece->getPieceType());
+				self::putString($out, $piece->getPackId());
+				self::putBool($out, $piece->isDefaultPiece());
+				self::putString($out, $piece->getProductId());
+			}
+			LE::writeUnsignedInt($out, count($skin->getPieceTintColors()));
+			foreach($skin->getPieceTintColors() as $tint){
+				self::putString($out, $tint->getPieceType());
+				LE::writeUnsignedInt($out, count($tint->getColors()));
+				foreach($tint->getColors() as $color){
+					self::putString($out, $color);
+				}
 			}
 		}
 		if($hasModernSkinBooleans){
@@ -260,20 +308,26 @@ final class CommonTypes{
 	}
 
 	/** @throws DataDecodeException */
-	private static function getSkinImage(ByteBufferReader $in) : SkinImage{
-		$width = LE::readUnsignedInt($in);
-		$height = LE::readUnsignedInt($in);
+	private static function getSkinImage(ByteBufferReader $in, int $protocolId) : SkinImage{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_13_0){
+			$width = LE::readUnsignedInt($in);
+			$height = LE::readUnsignedInt($in);
+		}
 		$data = self::getString($in);
 		try{
-			return new SkinImage($height, $width, $data);
+			return $protocolId >= ProtocolInfo::PROTOCOL_1_13_0 ?
+				new SkinImage($height, $width, $data) :
+				SkinImage::fromLegacy($data);
 		}catch(\InvalidArgumentException $e){
 			throw new PacketDecodeException($e->getMessage(), 0, $e);
 		}
 	}
 
-	private static function putSkinImage(ByteBufferWriter $out, SkinImage $image) : void{
-		LE::writeUnsignedInt($out, $image->getWidth());
-		LE::writeUnsignedInt($out, $image->getHeight());
+	private static function putSkinImage(ByteBufferWriter $out, SkinImage $image, int $protocolId) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_13_0){
+			LE::writeUnsignedInt($out, $image->getWidth());
+			LE::writeUnsignedInt($out, $image->getHeight());
+		}
 		self::putString($out, $image->getData());
 	}
 
@@ -345,7 +399,7 @@ final class CommonTypes{
 				$canDestroy[] = self::getString($in);
 			}
 
-			$extraData = $id === self::LEGACY_SHIELD_RUNTIME_ID ?
+			$extraData = self::isShieldRuntimeId($id, $protocolId) ?
 				new ItemStackExtraDataShield($nbt, $canPlaceOn, $canDestroy, VarInt::readSignedLong($in)) :
 				new ItemStackExtraData($nbt, $canPlaceOn, $canDestroy);
 			$rawExtraDataWriter = new ByteBufferWriter();
@@ -362,7 +416,7 @@ final class CommonTypes{
 			self::putString($out, $itemStack->getRawExtraData());
 		}else{
 			$extraDataReader = new ByteBufferReader($itemStack->getRawExtraData());
-			$extraData = $itemStack->getId() === self::LEGACY_SHIELD_RUNTIME_ID ?
+			$extraData = self::isShieldRuntimeId($itemStack->getId(), $protocolId) ?
 				ItemStackExtraDataShield::read($extraDataReader) :
 				ItemStackExtraData::read($extraDataReader);
 			$nbt = $extraData->getNbt();
@@ -406,7 +460,7 @@ final class CommonTypes{
 
 	/** @throws DataDecodeException */
 	public static function getItemStackWrapper(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL, bool $hasLegacyNetId = false) : ItemStackWrapper{
-		if($protocolId < ProtocolInfo::PROTOCOL_1_16_220 && $hasLegacyNetId){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0 && $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && $hasLegacyNetId){
 			$stackId = self::readServerItemStackId($in);
 			return new ItemStackWrapper($stackId, self::getItemStackWithoutStackId($in, $protocolId));
 		}
@@ -430,7 +484,7 @@ final class CommonTypes{
 
 	public static function putItemStackWrapper(ByteBufferWriter $out, ItemStackWrapper $itemStackWrapper, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL, bool $hasLegacyNetId = false) : void{
 		$itemStack = $itemStackWrapper->getItemStack();
-		if($protocolId < ProtocolInfo::PROTOCOL_1_16_220 && $hasLegacyNetId){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0 && $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && $hasLegacyNetId){
 			self::writeServerItemStackId($out, $itemStackWrapper->getStackId());
 			self::putItemStackWithoutStackId($out, $itemStack, $protocolId);
 			return;
@@ -765,7 +819,7 @@ final class CommonTypes{
 		$toActorUniqueId = self::getActorUniqueId($in);
 		$type = Byte::readUnsigned($in);
 		$immediate = self::getBool($in);
-		$causedByRider = self::getBool($in);
+		$causedByRider = $protocolId >= ProtocolInfo::PROTOCOL_1_16_0 ? self::getBool($in) : false;
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
 			$vehicleAngularVelocity = LE::readFloat($in);
 		}
@@ -777,7 +831,9 @@ final class CommonTypes{
 		self::putActorUniqueId($out, $link->toActorUniqueId);
 		Byte::writeUnsigned($out, $link->type);
 		self::putBool($out, $link->immediate);
-		self::putBool($out, $link->causedByRider);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
+			self::putBool($out, $link->causedByRider);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_20){
 			LE::writeFloat($out, $link->vehicleAngularVelocity);
 		}
@@ -838,7 +894,7 @@ final class CommonTypes{
 		}
 		$result->integrityValue = LE::readFloat($in);
 		$result->integritySeed = LE::readUnsignedInt($in);
-		$result->pivot = self::getVector3($in);
+		$result->pivot = $protocolId >= ProtocolInfo::PROTOCOL_1_13_0 ? self::getVector3($in) : new Vector3(0, 0, 0);
 
 		return $result;
 	}
@@ -864,7 +920,9 @@ final class CommonTypes{
 		}
 		LE::writeFloat($out, $structureSettings->integrityValue);
 		LE::writeUnsignedInt($out, $structureSettings->integritySeed);
-		self::putVector3($out, $structureSettings->pivot);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_13_0){
+			self::putVector3($out, $structureSettings->pivot);
+		}
 	}
 
 	/** @throws DataDecodeException */

@@ -58,19 +58,23 @@ class InventoryTransactionPacket extends DataPacket implements ClientboundPacket
 	}
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$this->requestId = CommonTypes::readLegacyItemStackRequestId($in);
-
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			$this->requestChangedSlots = CommonTypes::readOptional($in, static function(ByteBufferReader $in) : array{
-				$result = [];
+		$this->requestId = 0;
+		$this->requestChangedSlots = null;
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
+			$this->requestId = CommonTypes::readLegacyItemStackRequestId($in);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+				$this->requestChangedSlots = CommonTypes::readOptional($in, static function(ByteBufferReader $in) : array{
+					$result = [];
+					for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
+						$result[] = InventoryTransactionChangedSlotsHack::read($in);
+					}
+					return $result;
+				});
+			}elseif($this->requestId !== 0){
+				$this->requestChangedSlots = [];
 				for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
-					$result[] = InventoryTransactionChangedSlotsHack::read($in);
+					$this->requestChangedSlots[] = InventoryTransactionChangedSlotsHack::read($in);
 				}
-				return $result;
-			});
-		}elseif($this->requestId !== 0){
-			for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
-				$this->requestChangedSlots[] = InventoryTransactionChangedSlotsHack::read($in);
 			}
 		}
 
@@ -93,21 +97,21 @@ class InventoryTransactionPacket extends DataPacket implements ClientboundPacket
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		CommonTypes::writeLegacyItemStackRequestId($out, $this->requestId);
-
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			CommonTypes::writeOptional($out, $this->requestChangedSlots, static function(ByteBufferWriter $out, array $value) : void{
-				VarInt::writeUnsignedInt($out, count($value));
-				foreach($value as $changedSlots){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
+			CommonTypes::writeLegacyItemStackRequestId($out, $this->requestId);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+				CommonTypes::writeOptional($out, $this->requestChangedSlots, static function(ByteBufferWriter $out, array $value) : void{
+					VarInt::writeUnsignedInt($out, count($value));
+					foreach($value as $changedSlots){
+						$changedSlots->write($out);
+					}
+				});
+				Byte::writeUnsigned($out, 1);
+			}elseif($this->requestId !== 0){
+				VarInt::writeUnsignedInt($out, count($this->requestChangedSlots ?? []));
+				foreach(($this->requestChangedSlots ?? []) as $changedSlots){
 					$changedSlots->write($out);
 				}
-			});
-
-			Byte::writeUnsigned($out, 1);
-		}elseif($this->requestId !== 0){
-			VarInt::writeUnsignedInt($out, count($this->requestChangedSlots ?? []));
-			foreach(($this->requestChangedSlots ?? []) as $changedSlots){
-				$changedSlots->write($out);
 			}
 		}
 		VarInt::writeUnsignedInt($out, $this->trData->getTypeId());

@@ -134,7 +134,7 @@ final class ShapedRecipe extends RecipeWithTypeId{
 			}
 		}
 
-		$recipeNetId = CommonTypes::readRecipeNetId($in);
+		$recipeNetId = $protocolId >= ProtocolInfo::PROTOCOL_1_16_0 ? CommonTypes::readRecipeNetId($in) : 0;
 
 		return new self($recipeType, $recipeId, $input, $output, $uuid, $block, $priority, $symmetric ?? true, $unlockingRequirement ?? new RecipeUnlockingRequirement(null), $recipeNetId);
 	}
@@ -165,6 +165,8 @@ final class ShapedRecipe extends RecipeWithTypeId{
 			}
 		}
 
-		CommonTypes::writeRecipeNetId($out, $this->recipeNetId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
+			CommonTypes::writeRecipeNetId($out, $this->recipeNetId);
+		}
 	}
 }

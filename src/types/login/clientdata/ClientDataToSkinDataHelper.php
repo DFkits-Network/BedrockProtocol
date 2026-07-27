@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types\login\clientdata;
 
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\types\skin\PersonaPieceTintColor;
 use pocketmine\network\mcpe\protocol\types\skin\PersonaSkinPiece;
 use pocketmine\network\mcpe\protocol\types\skin\SkinAnimation;
@@ -50,36 +51,51 @@ final class ClientDataToSkinDataHelper{
 				),
 				$animation->Type,
 				$animation->Frames,
-				$animation->AnimationExpression
+				$animation->AnimationExpression ?? 0
 			);
 		}
+		$skinData = self::safeB64Decode($clientData->SkinData, "SkinData");
+		$skinImage = isset($clientData->SkinImageHeight, $clientData->SkinImageWidth) ?
+			new SkinImage($clientData->SkinImageHeight, $clientData->SkinImageWidth, $skinData) :
+			SkinImage::fromLegacy($skinData);
+
+		$capeImage = new SkinImage(0, 0, "");
+		$capeData = self::safeB64Decode($clientData->CapeData, "CapeData");
+		if($capeData !== ""){
+			$capeImage = isset($clientData->CapeImageHeight, $clientData->CapeImageWidth) ?
+				new SkinImage($clientData->CapeImageHeight, $clientData->CapeImageWidth, $capeData) :
+				SkinImage::fromLegacy($capeData);
+		}
+
 		return new SkinData(
 			$clientData->SkinId,
 			$clientData->PlayFabId ?? "",
-			self::safeB64Decode($clientData->SkinResourcePatch, "SkinResourcePatch"),
-			new SkinImage($clientData->SkinImageHeight, $clientData->SkinImageWidth, self::safeB64Decode($clientData->SkinData, "SkinData")),
+			isset($clientData->SkinResourcePatch) ? self::safeB64Decode($clientData->SkinResourcePatch, "SkinResourcePatch") : null,
+			$skinImage,
 			$animations,
-			new SkinImage($clientData->CapeImageHeight, $clientData->CapeImageWidth, self::safeB64Decode($clientData->CapeData, "CapeData")),
-			self::safeB64Decode($clientData->SkinGeometryData, "SkinGeometryData"),
+			$capeImage,
+			self::safeB64Decode($clientData->SkinGeometryData ?? $clientData->SkinGeometry, "SkinGeometryData"),
 			isset($clientData->SkinGeometryDataEngineVersion) ?
-				self::safeB64Decode($clientData->SkinGeometryDataEngineVersion, "SkinGeometryDataEngineVersion") : "",
-			self::safeB64Decode($clientData->SkinAnimationData, "SkinAnimationData"),
-			$clientData->CapeId,
+				self::safeB64Decode($clientData->SkinGeometryDataEngineVersion, "SkinGeometryDataEngineVersion") :
+				ProtocolInfo::MINECRAFT_VERSION_NETWORK,
+			isset($clientData->SkinAnimationData) ? self::safeB64Decode($clientData->SkinAnimationData, "SkinAnimationData") : "",
+			$clientData->CapeId ?? "",
 			null,
-			$clientData->ArmSize,
-			$clientData->SkinColor,
+			$clientData->ArmSize ?? "",
+			$clientData->SkinColor ?? "",
 			array_map(function(ClientDataPersonaSkinPiece $piece) : PersonaSkinPiece{
 				return new PersonaSkinPiece($piece->PieceId, $piece->PieceType, $piece->PackId, $piece->IsDefault, $piece->ProductId);
-			}, $clientData->PersonaPieces),
+			}, $clientData->PersonaPieces ?? []),
 			array_map(function(ClientDataPersonaPieceTintColor $tint) : PersonaPieceTintColor{
 				return new PersonaPieceTintColor($tint->PieceType, $tint->Colors);
-			}, $clientData->PieceTintColors),
+			}, $clientData->PieceTintColors ?? []),
 			true,
 			$clientData->PremiumSkin,
-			$clientData->PersonaSkin,
-			$clientData->CapeOnClassicSkin,
+			$clientData->PersonaSkin ?? false,
+			$clientData->CapeOnClassicSkin ?? false,
 			true, //assume this is true? there's no field for it ...
 			$clientData->OverrideSkin ?? true,
+			$clientData->SkinGeometryName ?? null,
 		);
 	}
 }

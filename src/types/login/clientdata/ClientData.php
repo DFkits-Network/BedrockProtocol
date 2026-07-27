@@ -21,26 +21,26 @@ final class ClientData{
 
 	/**
 	 * @var ClientDataAnimationFrame[]
-	 * @required
+	 * >= PROTOCOL_1_13_0
 	 */
-	public array $AnimatedImageData;
+	public array $AnimatedImageData = [];
 
-	/** @required */
+	/** >= PROTOCOL_1_14_60 */
 	public string $ArmSize;
 
 	/** @required */
 	public string $CapeData;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public string $CapeId;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public int $CapeImageHeight;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public int $CapeImageWidth;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public bool $CapeOnClassicSkin;
 
 	/** >= ProtocolInfo::PROTOCOL_1_26_30 */
@@ -102,16 +102,16 @@ final class ClientData{
 
 	/**
 	 * @var ClientDataPersonaSkinPiece[]
-	 * @required
+	 * >= PROTOCOL_1_14_60
 	 */
 	public array $PersonaPieces;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public bool $PersonaSkin;
 
 	/**
 	 * @var ClientDataPersonaPieceTintColor[]
-	 * @required
+	 * >= PROTOCOL_1_14_60
 	 */
 	public array $PieceTintColors;
 
@@ -138,16 +138,22 @@ final class ClientData{
 	/** @required */
 	public string $ServerAddress;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public string $SkinAnimationData;
 
-	/** @required */
+	/** >= PROTOCOL_1_14_60 */
 	public string $SkinColor;
 
 	/** @required */
 	public string $SkinData;
 
-	/** @required */
+	/** <= PROTOCOL_1_12_0 */
+	public string $SkinGeometryName;
+
+	/** <= PROTOCOL_1_12_0 */
+	public string $SkinGeometry;
+
+	/** >= PROTOCOL_1_13_0 */
 	public string $SkinGeometryData;
 
 	/** >= ProtocolInfo::PROTOCOL_1_17_30 */
@@ -156,13 +162,13 @@ final class ClientData{
 	/** @required */
 	public string $SkinId;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public int $SkinImageHeight;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public int $SkinImageWidth;
 
-	/** @required */
+	/** >= PROTOCOL_1_13_0 */
 	public string $SkinResourcePatch;
 
 	/** @required */

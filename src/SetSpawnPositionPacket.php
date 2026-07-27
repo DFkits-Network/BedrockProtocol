@@ -37,38 +37,52 @@ class SetSpawnPositionPacket extends DataPacket implements ClientboundPacket{
 	 */
 	public BlockPosition $causingBlockPosition;
 
+	public bool $spawnForced;
+
 	/**
 	 * @generate-create-func
 	 */
-	private static function create(int $spawnType, BlockPosition $spawnPosition, int $dimension, BlockPosition $causingBlockPosition) : self{
+	private static function create(int $spawnType, BlockPosition $spawnPosition, int $dimension, BlockPosition $causingBlockPosition, bool $spawnForced) : self{
 		$result = new self;
 		$result->spawnType = $spawnType;
 		$result->spawnPosition = $spawnPosition;
 		$result->dimension = $dimension;
 		$result->causingBlockPosition = $causingBlockPosition;
+		$result->spawnForced = $spawnForced;
 		return $result;
 	}
 
-	public static function playerSpawn(BlockPosition $spawnPosition, int $dimension, BlockPosition $causingBlockPosition) : self{
-		return self::create(self::TYPE_PLAYER_SPAWN, $spawnPosition, $dimension, $causingBlockPosition);
+	public static function playerSpawn(BlockPosition $spawnPosition, int $dimension, BlockPosition $causingBlockPosition, bool $spawnForced = false) : self{
+		return self::create(self::TYPE_PLAYER_SPAWN, $spawnPosition, $dimension, $causingBlockPosition, $spawnForced);
 	}
 
-	public static function worldSpawn(BlockPosition $spawnPosition, int $dimension) : self{
-		return self::create(self::TYPE_WORLD_SPAWN, $spawnPosition, $dimension, new BlockPosition(Limits::INT32_MIN, Limits::INT32_MIN, Limits::INT32_MIN));
+	public static function worldSpawn(BlockPosition $spawnPosition, int $dimension, bool $spawnForced = false) : self{
+		return self::create(self::TYPE_WORLD_SPAWN, $spawnPosition, $dimension, new BlockPosition(Limits::INT32_MIN, Limits::INT32_MIN, Limits::INT32_MIN), $spawnForced);
 	}
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->spawnType = VarInt::readSignedInt($in);
 		$this->spawnPosition = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-		$this->dimension = VarInt::readSignedInt($in);
-		$this->causingBlockPosition = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
+			$this->dimension = VarInt::readSignedInt($in);
+			$this->causingBlockPosition = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+			$this->spawnForced = false;
+		}else{
+			$this->dimension = 0;
+			$this->causingBlockPosition = new BlockPosition(Limits::INT32_MIN, Limits::INT32_MIN, Limits::INT32_MIN);
+			$this->spawnForced = CommonTypes::getBool($in);
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeSignedInt($out, $this->spawnType);
 		CommonTypes::putBlockPosition($out, $this->spawnPosition, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
-		VarInt::writeSignedInt($out, $this->dimension);
-		CommonTypes::putBlockPosition($out, $this->causingBlockPosition, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
+			VarInt::writeSignedInt($out, $this->dimension);
+			CommonTypes::putBlockPosition($out, $this->causingBlockPosition, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
+		}else{
+			CommonTypes::putBool($out, $this->spawnForced);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

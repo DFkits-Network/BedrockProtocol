@@ -44,14 +44,20 @@ class RespawnPacket extends DataPacket implements ClientboundPacket, Serverbound
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->position = CommonTypes::getVector3($in);
-		$this->respawnState = Byte::readUnsigned($in);
-		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
+		$this->respawnState = self::SEARCHING_FOR_SPAWN;
+		$this->actorRuntimeId = 0;
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_13_0){
+			$this->respawnState = Byte::readUnsigned($in);
+			$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putVector3($out, $this->position);
-		Byte::writeUnsigned($out, $this->respawnState);
-		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_13_0){
+			Byte::writeUnsigned($out, $this->respawnState);
+			CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

@@ -41,7 +41,7 @@ abstract class TransactionData{
 	 * @throws PacketDecodeException
 	 */
 	final public function decodeTransaction(ByteBufferReader $in, int $protocolId) : void{
-		$hasItemStackIds = $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && CommonTypes::getBool($in);
+		$hasItemStackIds = $protocolId >= ProtocolInfo::PROTOCOL_1_16_0 && $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && CommonTypes::getBool($in);
 		$actionCount = VarInt::readUnsignedInt($in);
 		$this->actions = [];
 		for($i = 0; $i < $actionCount; ++$i){
@@ -55,7 +55,7 @@ abstract class TransactionData{
 	 * @throws PacketDecodeException
 	 */
 	final public function decodeAuthInput(ByteBufferReader $in, int $protocolId) : void{
-		$hasItemStackIds = $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && CommonTypes::getBool($in);
+		$hasItemStackIds = $protocolId >= ProtocolInfo::PROTOCOL_1_16_0 && $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && CommonTypes::getBool($in);
 		$actionCount = VarInt::readUnsignedInt($in);
 		$this->actions = [];
 		for($i = 0; $i < $actionCount; ++$i){
@@ -71,7 +71,7 @@ abstract class TransactionData{
 	abstract protected function decodeData(ByteBufferReader $in, int $protocolId) : void;
 
 	final public function encodeTransaction(ByteBufferWriter $out, int $protocolId) : void{
-		if($protocolId < ProtocolInfo::PROTOCOL_1_16_220){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0 && $protocolId < ProtocolInfo::PROTOCOL_1_16_220){
 			CommonTypes::putBool($out, false);
 		}
 		VarInt::writeUnsignedInt($out, count($this->actions));
@@ -82,7 +82,7 @@ abstract class TransactionData{
 	}
 
 	final public function encodeAuthInput(ByteBufferWriter $out, int $protocolId) : void{
-		if($protocolId < ProtocolInfo::PROTOCOL_1_16_220){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0 && $protocolId < ProtocolInfo::PROTOCOL_1_16_220){
 			CommonTypes::putBool($out, false);
 		}
 		VarInt::writeUnsignedInt($out, count($this->actions));

@@ -298,8 +298,12 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		}elseif($this->playMode === PlayMode::VR){
 			$this->vrGazeDirection = CommonTypes::getVector3($in);
 		}
-		$this->tick = VarInt::readUnsignedLong($in);
-		$this->delta = CommonTypes::getVector3($in);
+		$this->tick = 0;
+		$this->delta = new Vector3(0, 0, 0);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+			$this->tick = VarInt::readUnsignedLong($in);
+			$this->delta = CommonTypes::getVector3($in);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_210){
 			if($this->inputFlags->get(PlayerAuthInputFlags::PERFORM_ITEM_INTERACTION)){
 				$this->itemInteractionData = ItemInteractionData::read($in, $protocolId);
@@ -364,8 +368,10 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 			assert($this->vrGazeDirection !== null);
 			CommonTypes::putVector3($out, $this->vrGazeDirection);
 		}
-		VarInt::writeUnsignedLong($out, $this->tick);
-		CommonTypes::putVector3($out, $this->delta);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+			VarInt::writeUnsignedLong($out, $this->tick);
+			CommonTypes::putVector3($out, $this->delta);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_210){
 			if($this->itemInteractionData !== null){
 				$this->itemInteractionData->write($out, $protocolId);

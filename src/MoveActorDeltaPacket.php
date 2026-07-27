@@ -18,6 +18,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\DataDecodeException;
 use pmmp\encoding\LE;
+use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
@@ -43,9 +44,11 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 	public float $headYaw = 0.0;
 
 	/** @throws DataDecodeException */
-	private function maybeReadCoord(int $flag, ByteBufferReader $in) : float{
+	private function maybeReadCoord(int $flag, ByteBufferReader $in, int $protocolId) : float{
 		if(($this->flags & $flag) !== 0){
-			return LE::readFloat($in);
+			return $protocolId >= ProtocolInfo::PROTOCOL_1_16_100 ?
+				LE::readFloat($in) :
+				(float) VarInt::readSignedInt($in);
 		}
 		return 0;
 	}
@@ -61,17 +64,21 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
 		$this->flags = LE::readUnsignedShort($in);
-		$this->xPos = $this->maybeReadCoord(self::FLAG_HAS_X, $in);
-		$this->yPos = $this->maybeReadCoord(self::FLAG_HAS_Y, $in);
-		$this->zPos = $this->maybeReadCoord(self::FLAG_HAS_Z, $in);
+		$this->xPos = $this->maybeReadCoord(self::FLAG_HAS_X, $in, $protocolId);
+		$this->yPos = $this->maybeReadCoord(self::FLAG_HAS_Y, $in, $protocolId);
+		$this->zPos = $this->maybeReadCoord(self::FLAG_HAS_Z, $in, $protocolId);
 		$this->pitch = $this->maybeReadRotation(self::FLAG_HAS_PITCH, $in);
 		$this->yaw = $this->maybeReadRotation(self::FLAG_HAS_YAW, $in);
 		$this->headYaw = $this->maybeReadRotation(self::FLAG_HAS_HEAD_YAW, $in);
 	}
 
-	private function maybeWriteCoord(int $flag, float $val, ByteBufferWriter $out) : void{
+	private function maybeWriteCoord(int $flag, float $val, ByteBufferWriter $out, int $protocolId) : void{
 		if(($this->flags & $flag) !== 0){
-			LE::writeFloat($out, $val);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+				LE::writeFloat($out, $val);
+			}else{
+				VarInt::writeSignedInt($out, (int) $val);
+			}
 		}
 	}
 
@@ -84,9 +91,9 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
 		LE::writeUnsignedShort($out, $this->flags);
-		$this->maybeWriteCoord(self::FLAG_HAS_X, $this->xPos, $out);
-		$this->maybeWriteCoord(self::FLAG_HAS_Y, $this->yPos, $out);
-		$this->maybeWriteCoord(self::FLAG_HAS_Z, $this->zPos, $out);
+		$this->maybeWriteCoord(self::FLAG_HAS_X, $this->xPos, $out, $protocolId);
+		$this->maybeWriteCoord(self::FLAG_HAS_Y, $this->yPos, $out, $protocolId);
+		$this->maybeWriteCoord(self::FLAG_HAS_Z, $this->zPos, $out, $protocolId);
 		$this->maybeWriteRotation(self::FLAG_HAS_PITCH, $this->pitch, $out);
 		$this->maybeWriteRotation(self::FLAG_HAS_YAW, $this->yaw, $out);
 		$this->maybeWriteRotation(self::FLAG_HAS_HEAD_YAW, $this->headYaw, $out);
