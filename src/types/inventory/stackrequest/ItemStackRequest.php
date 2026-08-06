@@ -186,7 +186,14 @@ final class ItemStackRequest{
 		$requestId = CommonTypes::readItemStackRequestId($in);
 		$actions = [];
 		for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
-			$typeId = self::actionTypeFromNetwork(Byte::readUnsigned($in), $protocolId);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				//v2168: the primary type ID is a VarUInt using the compact (bundle-removed) numbering,
+				//followed by a duplicate type byte (legacy numbering) which is discarded
+				$typeId = ItemStackRequestActionType::fromModernTypeId(VarInt::readUnsignedInt($in));
+				Byte::readUnsigned($in);
+			}else{
+				$typeId = self::actionTypeFromNetwork(Byte::readUnsigned($in), $protocolId);
+			}
 			$actions[] = self::readAction($in, $protocolId, $typeId);
 		}
 		$filterStrings = [];
@@ -205,8 +212,13 @@ final class ItemStackRequest{
 		CommonTypes::writeItemStackRequestId($out, $this->requestId);
 		VarInt::writeUnsignedInt($out, count($this->actions));
 		foreach($this->actions as $action){
-			$typeId = self::actionTypeToNetwork($action->getTypeId(), $protocolId);
-			Byte::writeUnsigned($out, $typeId);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				VarInt::writeUnsignedInt($out, ItemStackRequestActionType::toModernTypeId($action->getTypeId()));
+				Byte::writeUnsigned($out, $action->getTypeId()); //duplicate type byte (legacy numbering)
+			}else{
+				$typeId = self::actionTypeToNetwork($action->getTypeId(), $protocolId);
+				Byte::writeUnsigned($out, $typeId);
+			}
 			$action->write($out, $protocolId);
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_200){

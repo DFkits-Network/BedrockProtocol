@@ -12,15 +12,15 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\network\mcpe\protocol\types\recipe;
+namespace pocketmine\network\mcpe\protocol\types\sound;
 
-use pmmp\encoding\ByteBufferWriter;
+final class SoundFade{
+	public function __construct(
+		private float $targetVolume,
+		private float $duration
+	){}
 
-/**
- * Describes what items are accepted in a recipe input.
- */
-interface ItemDescriptor{
-	public function getTypeId() : int;
+	public function getTargetVolume() : float{ return $this->targetVolume; }
 
-	public function write(ByteBufferWriter $out, int $protocolId) : void;
+	public function getDuration() : float{ return $this->duration; }
 }

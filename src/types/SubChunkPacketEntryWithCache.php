@@ -33,15 +33,25 @@ final class SubChunkPacketEntryWithCache{
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$base = SubChunkPacketEntryCommon::read($in, $protocolId, true);
-		$usedBlobHash = ($protocolId >= ProtocolInfo::PROTOCOL_1_18_10 || CommonTypes::getBool($in)) ?
-			LE::readUnsignedLong($in) :
-			-1;
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			// optionalNull blobId
+			$usedBlobHash = CommonTypes::getBool($in) ? LE::readUnsignedLong($in) : -1;
+		}else{
+			$usedBlobHash = ($protocolId >= ProtocolInfo::PROTOCOL_1_18_10 || CommonTypes::getBool($in)) ?
+				LE::readUnsignedLong($in) :
+				-1;
+		}
 
 		return new self($base, $usedBlobHash);
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		$this->base->write($out, $protocolId, true);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::putBool($out, true);
+			LE::writeUnsignedLong($out, $this->usedBlobHash);
+			return;
+		}
 		if($protocolId === ProtocolInfo::PROTOCOL_1_18_0){
 			CommonTypes::putBool($out, true);
 		}

@@ -51,11 +51,11 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 
 	public static function decode(int $typeId, ByteBufferReader $in, int $protocolId) : self{
 		$recipeId = CommonTypes::getString($in);
-		$template = $protocolId >= ProtocolInfo::PROTOCOL_1_19_80 ?
-			CommonTypes::getRecipeIngredient($in) :
-			null;
-		$input = CommonTypes::getRecipeIngredient($in);
-		$addition = CommonTypes::getRecipeIngredient($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_80){
+			$template = RecipeIngredient::read($in, $protocolId);
+		}
+		$input = RecipeIngredient::read($in, $protocolId);
+		$addition = RecipeIngredient::read($in, $protocolId);
 		$output = CommonTypes::getItemStackWithoutStackId($in, $protocolId);
 		$blockName = CommonTypes::getString($in);
 		$recipeNetId = CommonTypes::readRecipeNetId($in);
@@ -63,7 +63,7 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 		return new self(
 			$typeId,
 			$recipeId,
-			$template,
+			$template ?? null,
 			$input,
 			$addition,
 			$output,
@@ -75,13 +75,10 @@ final class SmithingTransformRecipe extends RecipeWithTypeId{
 	public function encode(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->recipeId);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_19_80){
-			if($this->template === null){
-				throw new \InvalidArgumentException("SmithingTransformRecipe template cannot be null");
-			}
-			CommonTypes::putRecipeIngredient($out, $this->template);
+			($this->template ?? new RecipeIngredient(null, 0))->write($out, $protocolId);
 		}
-		CommonTypes::putRecipeIngredient($out, $this->input);
-		CommonTypes::putRecipeIngredient($out, $this->addition);
+		$this->input->write($out, $protocolId);
+		$this->addition->write($out, $protocolId);
 		CommonTypes::putItemStackWithoutStackId($out, $this->output, $protocolId);
 		CommonTypes::putString($out, $this->blockName);
 		CommonTypes::writeRecipeNetId($out, $this->recipeNetId);

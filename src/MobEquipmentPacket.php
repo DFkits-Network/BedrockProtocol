@@ -45,7 +45,7 @@ class MobEquipmentPacket extends DataPacket implements ClientboundPacket, Server
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
-			$this->item = CommonTypes::getNetworkItemStackDescriptor($in);
+			$this->item = CommonTypes::getNetworkItemStackDescriptor($in, $protocolId);
 		}else{
 			$this->item = CommonTypes::getItemStackWrapper($in, $protocolId);
 		}
@@ -57,7 +57,7 @@ class MobEquipmentPacket extends DataPacket implements ClientboundPacket, Server
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
-			CommonTypes::putNetworkItemStackDescriptor($out, $this->item);
+			CommonTypes::putNetworkItemStackDescriptor($out, $this->item, $protocolId);
 		}else{
 			CommonTypes::putItemStackWrapper($out, $this->item, $protocolId);
 		}

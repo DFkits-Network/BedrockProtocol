@@ -16,6 +16,8 @@ namespace pocketmine\network\mcpe\protocol\types\skin;
 
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use Ramsey\Uuid\Uuid;
+use function hexdec;
+use function ltrim;
 use function sprintf;
 
 class SkinData{
@@ -23,6 +25,10 @@ class SkinData{
 
 	public const ARM_SIZE_SLIM = "slim";
 	public const ARM_SIZE_WIDE = "wide";
+
+	public const TRUSTED_SKIN_FLAG_UNSET = "unset";
+	public const TRUSTED_SKIN_FLAG_FALSE = "false";
+	public const TRUSTED_SKIN_FLAG_TRUE = "true";
 
 	private string $resourcePatch;
 	private SkinImage $capeImage;
@@ -56,7 +62,9 @@ class SkinData{
 		private bool $personaCapeOnClassic = false,
 		private bool $isPrimaryUser = true,
 		private bool $override = true,
-		?string $geometryName = null
+		?string $geometryName = null,
+		private string $trustedSkinFlag = self::TRUSTED_SKIN_FLAG_TRUE,
+		private string $profileHash = ""
 	){
 		$this->geometryName = $geometryName ?? "geometry.humanoid.custom";
 		$this->resourcePatch = $resourcePatch ?? sprintf(self::DEFAULT_RESOURCE_PATCH, $this->geometryName);
@@ -114,6 +122,41 @@ class SkinData{
 
 	public function getSkinColor() : string{
 		return $this->skinColor;
+	}
+
+	public function getTrustedSkinFlag() : string{
+		return $this->trustedSkinFlag;
+	}
+
+	public function getProfileHash() : string{
+		return $this->profileHash;
+	}
+
+	public static function convertArmSize(string $armSize) : int{
+		return match($armSize){
+			self::ARM_SIZE_SLIM, "slim" => 0,
+			default => 1,
+		};
+	}
+
+	public static function armSizeToString(int $armSize) : string{
+		return $armSize === 0 ? self::ARM_SIZE_SLIM : self::ARM_SIZE_WIDE;
+	}
+
+	public static function convertColor(string $color) : int{
+		$hex = ltrim($color, '#');
+		if($hex === '' || $hex === '0'){
+			return 0;
+		}
+
+		return (int) hexdec($hex);
+	}
+
+	public static function colorToString(int $color) : string{
+		if($color === 0){
+			return "";
+		}
+		return sprintf("#%06X", $color & 0xffffff);
 	}
 
 	/**

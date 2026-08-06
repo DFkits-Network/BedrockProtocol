@@ -99,4 +99,82 @@ final class MemoryCategory{
 	public const SCRIPTING_CONTEXT_RUN = 78;
 	public const DATA_DRIVEN_UI = 79;
 	public const DATA_DRIVEN_UI_DEFS = 80;
+
+	/*
+	 * Memory category IDs were reordered in 1.26.40. The unprefixed constants
+	 * above intentionally retain their pre-1.26.40 values so existing callers
+	 * keep writing the same legacy IDs. Use these constants for 1.26.40 data.
+	 * IDs not listed here are unchanged between the two versions.
+	 */
+	public const V1_26_40_BLOCK_TICKING_QUEUES = 5;
+	public const V1_26_40_BIOME_STORAGE = 6;
+	public const V1_26_40_BLOBS = 7;
+	public const V1_26_40_LIGHT_VOLUME_MANAGER = 43;
+	public const V1_26_40_NETWORK = 44;
+	public const V1_26_40_MARKETPLACE = 45;
+	public const V1_26_40_MATERIAL_DRAGON_COMPILED_DEFINITION = 46;
+	public const V1_26_40_MATERIAL_DRAGON_MATERIAL = 47;
+	public const V1_26_40_MATERIAL_DRAGON_RESOURCE = 48;
+	public const V1_26_40_MATERIAL_DRAGON_UNIFORM_MAP = 49;
+	public const V1_26_40_MATERIAL_RENDER_MATERIAL = 50;
+	public const V1_26_40_MATERIAL_RENDER_MATERIAL_GROUP = 51;
+	public const V1_26_40_MATERIAL_VARIATION_MANAGER = 52;
+	public const V1_26_40_MOLANG = 53;
+	public const V1_26_40_ORE_UI = 54;
+	public const V1_26_40_ORE_UI_CLIENT = 55;
+	public const V1_26_40_PERSONA_PIECES = 56;
+	public const V1_26_40_PERSONA_ANIMATIONS = 57;
+	public const V1_26_40_PERSONA_TEXTURES = 58;
+	public const V1_26_40_PERSONA_CHARACTERS = 59;
+	public const V1_26_40_PERSONA_SKIN_PACKS = 60;
+	public const V1_26_40_PERSONA_REPO = 61;
+	public const V1_26_40_PLAYER = 62;
+	public const V1_26_40_RENDER_CHUNK = 63;
+	public const V1_26_40_RENDER_CHUNK_INDEX_BUFFER = 64;
+	public const V1_26_40_RENDER_CHUNK_VERTEX_BUFFER = 65;
+	public const V1_26_40_RENDERING = 66;
+	public const V1_26_40_RENDERING_BGFX_INIT = 67;
+	public const V1_26_40_RENDERING_BGFX_START_FRAME = 68;
+	public const V1_26_40_RENDERING_BGFX_TESSELLATOR = 69;
+	public const V1_26_40_RENDERING_BGFX_END_FRAME = 70;
+	public const V1_26_40_RENDERING_BGFX_GRAPHICS_TASKS_INIT = 71;
+	public const V1_26_40_RENDERING_LIBRARY = 72;
+	public const V1_26_40_RENDERING_POLYGON_OPERATOR_POOL = 73;
+	public const V1_26_40_RENDERING_PBR_TEXTURE_DATA = 74;
+	public const V1_26_40_RENDERING_RENDER_REGISTRY = 75;
+	public const V1_26_40_RENDERING_SETUP = 76;
+	public const V1_26_40_RENDERING_VERTICES = 77;
+	public const V1_26_40_REQUEST_LOG = 78;
+	public const V1_26_40_RESOURCE_PACKS = 79;
+	public const V1_26_40_SOUND = 80;
+	public const V1_26_40_SUB_CHUNK_BIOME_DATA = 81;
+	public const V1_26_40_SUB_CHUNK_BLOCK_DATA = 82;
+	public const V1_26_40_SUB_CHUNK_LIGHT_DATA = 83;
+	public const V1_26_40_TEXTURES = 84;
+	public const V1_26_40_WEATHER_RENDERER = 85;
+	public const V1_26_40_WORLD_GENERATOR = 86;
+	public const V1_26_40_TASKS = 87;
+	public const V1_26_40_TEST = 88;
+	public const V1_26_40_TEST_LOAD_TEST_FLAGS = 89;
+	public const V1_26_40_SCRIPTING = 90;
+	public const V1_26_40_SCRIPTING_RUNTIME = 91;
+	public const V1_26_40_SCRIPTING_CONTEXT = 92;
+	public const V1_26_40_SCRIPTING_CONTEXT_BINDINGS_MC = 93;
+	public const V1_26_40_SCRIPTING_CONTEXT_BINDINGS_GT = 94;
+	public const V1_26_40_SCRIPTING_CONTEXT_RUN = 95;
+	public const V1_26_40_DATA_DRIVEN_UI = 96;
+	public const V1_26_40_DATA_DRIVEN_UI_DEFS = 97;
+	public const V1_26_40_GAMEFACE = 98;
+	public const V1_26_40_GAMEFACE_SYSTEM = 99;
+	public const V1_26_40_GAMEFACE_DOM = 100;
+	public const V1_26_40_GAMEFACE_CSS = 101;
+	public const V1_26_40_GAMEFACE_DISPLAY = 102;
+	public const V1_26_40_GAMEFACE_TEMP_ALLOCATOR = 103;
+	public const V1_26_40_GAMEFACE_POOL_ALLOCATOR = 104;
+	public const V1_26_40_GAMEFACE_DUMP = 105;
+	public const V1_26_40_GAMEFACE_MEDIA = 106;
+	public const V1_26_40_GAMEFACE_JSON = 107;
+	public const V1_26_40_GAMEFACE_SCRIPT_ENGINE = 108;
+	public const V1_26_40_GAMEFACE_SCRIPT = 109;
+	public const V1_26_40_GAMEFACE_LAYOUT = 110;
 }

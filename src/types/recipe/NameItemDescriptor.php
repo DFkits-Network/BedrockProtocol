@@ -16,27 +16,30 @@ namespace pocketmine\network\mcpe\protocol\types\recipe;
 
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\GetTypeIdFromConstTrait;
 
-final class ComplexAliasItemDescriptor implements ItemDescriptor{
+final class NameItemDescriptor implements ItemDescriptor{
 	use GetTypeIdFromConstTrait;
 
-	public const ID = ItemDescriptorType::COMPLEX_ALIAS;
+	public const ID = ItemDescriptorType::NAME;
 
 	public function __construct(
-		private string $alias
+		private string $name,
+		private int $auxValue
 	){}
 
-	public function getAlias() : string{ return $this->alias; }
+	public function getName() : string{ return $this->name; }
+
+	public function getAuxValue() : int{ return $this->auxValue; }
 
 	public static function read(ByteBufferReader $in) : self{
-		$alias = CommonTypes::getString($in);
-
-		return new self($alias);
+		return new self(CommonTypes::getString($in), VarInt::readSignedInt($in));
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
-		CommonTypes::putString($out, $this->alias);
+		CommonTypes::putString($out, $this->name);
+		VarInt::writeSignedInt($out, $this->auxValue);
 	}
 }

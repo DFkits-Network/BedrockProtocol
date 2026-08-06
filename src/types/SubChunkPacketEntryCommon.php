@@ -42,7 +42,73 @@ final class SubChunkPacketEntryCommon{
 
 	public function getRenderHeightMap() : ?SubChunkPacketHeightMapInfo{ return $this->renderHeightMap; }
 
+	private static function readHeightMap(ByteBufferReader $in, int $protocolId) : ?SubChunkPacketHeightMapInfo{
+		$heightMapDataType = Byte::readUnsigned($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			// 1.26.40+: type byte + optional<bool, heightMap payload>
+			$hasData = CommonTypes::getBool($in);
+			return match ($heightMapDataType) {
+				SubChunkPacketHeightMapType::NO_DATA => null,
+				SubChunkPacketHeightMapType::DATA => $hasData ? SubChunkPacketHeightMapInfo::read($in) : null,
+				SubChunkPacketHeightMapType::ALL_TOO_HIGH => SubChunkPacketHeightMapInfo::allTooHigh(),
+				SubChunkPacketHeightMapType::ALL_TOO_LOW => SubChunkPacketHeightMapInfo::allTooLow(),
+				SubChunkPacketHeightMapType::ALL_COPIED => null,
+				default => throw new PacketDecodeException("Unknown heightmap data type $heightMapDataType")
+			};
+		}
+
+		return match ($heightMapDataType) {
+			SubChunkPacketHeightMapType::NO_DATA => null,
+			SubChunkPacketHeightMapType::DATA => SubChunkPacketHeightMapInfo::read($in),
+			SubChunkPacketHeightMapType::ALL_TOO_HIGH => SubChunkPacketHeightMapInfo::allTooHigh(),
+			SubChunkPacketHeightMapType::ALL_TOO_LOW => SubChunkPacketHeightMapInfo::allTooLow(),
+			default => throw new PacketDecodeException("Unknown heightmap data type $heightMapDataType")
+		};
+	}
+
+	private static function writeHeightMap(ByteBufferWriter $out, int $protocolId, ?SubChunkPacketHeightMapInfo $heightMap, bool $copied = false) : void{
+		if($heightMap === null){
+			Byte::writeUnsigned($out, $copied ? SubChunkPacketHeightMapType::ALL_COPIED : SubChunkPacketHeightMapType::NO_DATA);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				CommonTypes::putBool($out, false);
+			}
+			return;
+		}
+		if($heightMap->isAllTooLow()){
+			Byte::writeUnsigned($out, SubChunkPacketHeightMapType::ALL_TOO_LOW);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				CommonTypes::putBool($out, false);
+			}
+			return;
+		}
+		if($heightMap->isAllTooHigh()){
+			Byte::writeUnsigned($out, SubChunkPacketHeightMapType::ALL_TOO_HIGH);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				CommonTypes::putBool($out, false);
+			}
+			return;
+		}
+
+		Byte::writeUnsigned($out, SubChunkPacketHeightMapType::DATA);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::putBool($out, true);
+		}
+		$heightMap->write($out);
+	}
+
 	public static function read(ByteBufferReader $in, int $protocolId, bool $cacheEnabled) : self{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$offset = SubChunkPositionOffset::read($in);
+			$requestResult = Byte::readUnsigned($in);
+			// optional terrain payload
+			$data = CommonTypes::getBool($in) ? CommonTypes::getString($in) : "";
+			$heightMapData = self::readHeightMap($in, $protocolId);
+			$renderHeightMapData = self::readHeightMap($in, $protocolId);
+			// blob id is handled by SubChunkPacketEntryWithCache / WithoutCache via optional at entry level
+			// but Cloudburst puts blob optional inside the common entry - caller still reads it for cache list type
+			return new self($offset, $requestResult, $data, $heightMapData, $renderHeightMapData);
+		}
+
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_10){
 			$offset = SubChunkPositionOffset::read($in);
 			$requestResult = Byte::readUnsigned($in);
@@ -53,14 +119,7 @@ final class SubChunkPacketEntryCommon{
 			$requestResult = VarInt::readSignedInt($in);
 		}
 
-		$heightMapDataType = Byte::readUnsigned($in);
-		$heightMapData = match ($heightMapDataType) {
-			SubChunkPacketHeightMapType::NO_DATA => null,
-			SubChunkPacketHeightMapType::DATA => SubChunkPacketHeightMapInfo::read($in),
-			SubChunkPacketHeightMapType::ALL_TOO_HIGH => SubChunkPacketHeightMapInfo::allTooHigh(),
-			SubChunkPacketHeightMapType::ALL_TOO_LOW => SubChunkPacketHeightMapInfo::allTooLow(),
-			default => throw new PacketDecodeException("Unknown heightmap data type $heightMapDataType")
-		};
+		$heightMapData = self::readHeightMap($in, $protocolId);
 
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_90){
 			$renderHeightMapDataType = Byte::readUnsigned($in);
@@ -84,6 +143,19 @@ final class SubChunkPacketEntryCommon{
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId, bool $cacheEnabled) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->offset->write($out);
+			Byte::writeUnsigned($out, $this->requestResult);
+			$hasData = $this->terrainData !== "";
+			CommonTypes::putBool($out, $hasData);
+			if($hasData){
+				CommonTypes::putString($out, $this->terrainData);
+			}
+			self::writeHeightMap($out, $protocolId, $this->heightMap);
+			self::writeHeightMap($out, $protocolId, $this->renderHeightMap, copied: $this->renderHeightMap === null);
+			return;
+		}
+
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_10){
 			$this->offset->write($out);
 			Byte::writeUnsigned($out, $this->requestResult);
@@ -95,17 +167,7 @@ final class SubChunkPacketEntryCommon{
 			VarInt::writeSignedInt($out, $this->requestResult);
 		}
 
-		if($this->heightMap === null){
-			Byte::writeUnsigned($out, SubChunkPacketHeightMapType::NO_DATA);
-		}elseif($this->heightMap->isAllTooLow()){
-			Byte::writeUnsigned($out, SubChunkPacketHeightMapType::ALL_TOO_LOW);
-		}elseif($this->heightMap->isAllTooHigh()){
-			Byte::writeUnsigned($out, SubChunkPacketHeightMapType::ALL_TOO_HIGH);
-		}else{
-			$heightMapData = $this->heightMap; //avoid PHPStan purity issue
-			Byte::writeUnsigned($out, SubChunkPacketHeightMapType::DATA);
-			$heightMapData->write($out);
-		}
+		self::writeHeightMap($out, $protocolId, $this->heightMap);
 
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_90){
 			if($this->renderHeightMap === null){
@@ -115,7 +177,7 @@ final class SubChunkPacketEntryCommon{
 			}elseif($this->renderHeightMap->isAllTooHigh()){
 				Byte::writeUnsigned($out, SubChunkPacketHeightMapType::ALL_TOO_HIGH);
 			}else{
-				$renderHeightMapData = $this->renderHeightMap; //avoid PHPStan purity issue
+				$renderHeightMapData = $this->renderHeightMap;
 				Byte::writeUnsigned($out, SubChunkPacketHeightMapType::DATA);
 				$renderHeightMapData->write($out);
 			}

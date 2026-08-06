@@ -48,7 +48,7 @@ final class DeprecatedCraftingResultsStackRequestAction extends ItemStackRequest
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$results = [];
 		for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
-			$results[] = CommonTypes::getItemStackWithoutStackId($in, $protocolId);
+			$results[] = CommonTypes::getItemStackRequestNetworkItemInstanceDescriptor($in, $protocolId);
 		}
 		$iterations = Byte::readUnsigned($in);
 		return new self($results, $iterations);
@@ -57,7 +57,7 @@ final class DeprecatedCraftingResultsStackRequestAction extends ItemStackRequest
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeUnsignedInt($out, count($this->results));
 		foreach($this->results as $result){
-			CommonTypes::putItemStackWithoutStackId($out, $result, $protocolId);
+			CommonTypes::putItemStackRequestNetworkItemInstanceDescriptor($out, $result, $protocolId);
 		}
 		Byte::writeUnsigned($out, $this->iterations);
 	}

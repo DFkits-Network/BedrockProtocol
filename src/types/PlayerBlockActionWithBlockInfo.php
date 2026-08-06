@@ -50,13 +50,14 @@ final class PlayerBlockActionWithBlockInfo implements PlayerBlockAction{
 		VarInt::writeSignedInt($out, $this->face);
 	}
 
-	public static function isValidActionType(int $actionType) : bool{
+	public static function isValidActionType(int $actionType, bool $includeStopBreak = false) : bool{
 		return match($actionType){
 			PlayerAction::ABORT_BREAK,
 			PlayerAction::START_BREAK,
 			PlayerAction::CRACK_BREAK,
 			PlayerAction::PREDICT_DESTROY_BLOCK,
 			PlayerAction::CONTINUE_DESTROY_BLOCK => true,
+			PlayerAction::STOP_BREAK => $includeStopBreak,
 			default => false
 		};
 	}

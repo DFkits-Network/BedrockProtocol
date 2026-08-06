@@ -17,6 +17,8 @@ namespace pocketmine\network\mcpe\protocol\types\recipe;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
+use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\types\GetTypeIdFromConstTrait;
 
 final class IntIdMetaItemDescriptor implements ItemDescriptor{
@@ -37,10 +39,12 @@ final class IntIdMetaItemDescriptor implements ItemDescriptor{
 
 	public function getMeta() : int{ return $this->meta; }
 
-	public static function read(ByteBufferReader $in) : self{
-		$id = LE::readSignedShort($in);
+	public static function read(ByteBufferReader $in, int $protocolId) : self{
+		$newFormat = $protocolId >= ProtocolInfo::PROTOCOL_1_19_30;
+
+		$id = $newFormat ? LE::readSignedShort($in) : VarInt::readSignedInt($in);
 		if($id !== 0){
-			$meta = LE::readSignedShort($in);
+			$meta = $newFormat ? LE::readSignedShort($in) : VarInt::readSignedInt($in);
 		}else{
 			$meta = 0;
 		}
@@ -48,10 +52,12 @@ final class IntIdMetaItemDescriptor implements ItemDescriptor{
 		return new self($id, $meta);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
-		LE::writeSignedShort($out, $this->id);
+	public function write(ByteBufferWriter $out, int $protocolId) : void{
+		$newFormat = $protocolId >= ProtocolInfo::PROTOCOL_1_19_30;
+
+		$newFormat ? LE::writeSignedShort($out, $this->id) : VarInt::writeSignedInt($out, $this->id);
 		if($this->id !== 0){
-			LE::writeSignedShort($out, $this->meta);
+			$newFormat ? LE::writeSignedShort($out, $this->meta) : VarInt::writeSignedInt($out, $this->meta);
 		}
 	}
 }

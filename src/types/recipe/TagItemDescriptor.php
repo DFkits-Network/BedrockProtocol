@@ -36,7 +36,7 @@ final class TagItemDescriptor implements ItemDescriptor{
 		return new self($tag);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->tag);
 	}
 }

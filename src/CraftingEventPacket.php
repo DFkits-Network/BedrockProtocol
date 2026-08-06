@@ -56,12 +56,16 @@ class CraftingEventPacket extends DataPacket implements ServerboundPacket{
 
 		$size = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $size and $i < 128; ++$i){
-			$this->input[] = CommonTypes::getItemStackWrapper($in, $protocolId);
+			$this->input[] = $protocolId >= ProtocolInfo::PROTOCOL_1_26_30 ?
+				CommonTypes::getNetworkItemStackDescriptor($in, $protocolId) :
+				CommonTypes::getItemStackWrapper($in, $protocolId);
 		}
 
 		$size = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $size and $i < 128; ++$i){
-			$this->output[] = CommonTypes::getItemStackWrapper($in, $protocolId);
+			$this->output[] = $protocolId >= ProtocolInfo::PROTOCOL_1_26_30 ?
+				CommonTypes::getNetworkItemStackDescriptor($in, $protocolId) :
+				CommonTypes::getItemStackWrapper($in, $protocolId);
 		}
 	}
 
@@ -72,12 +76,20 @@ class CraftingEventPacket extends DataPacket implements ServerboundPacket{
 
 		VarInt::writeUnsignedInt($out, count($this->input));
 		foreach($this->input as $item){
-			CommonTypes::putItemStackWrapper($out, $item, $protocolId);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+				CommonTypes::putNetworkItemStackDescriptor($out, $item, $protocolId);
+			}else{
+				CommonTypes::putItemStackWrapper($out, $item, $protocolId);
+			}
 		}
 
 		VarInt::writeUnsignedInt($out, count($this->output));
 		foreach($this->output as $item){
-			CommonTypes::putItemStackWrapper($out, $item, $protocolId);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+				CommonTypes::putNetworkItemStackDescriptor($out, $item, $protocolId);
+			}else{
+				CommonTypes::putItemStackWrapper($out, $item, $protocolId);
+			}
 		}
 	}
 

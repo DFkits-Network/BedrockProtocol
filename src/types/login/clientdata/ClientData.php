@@ -180,6 +180,12 @@ final class ClientData{
 	/** >= ProtocolInfo::PROTOCOL_1_19_20 */
 	public bool $TrustedSkin = false;
 
+	/** >= ProtocolInfo::PROTOCOL_1_26_40 */
+	public string $ProfileHash = "";
+
+	/** >= ProtocolInfo::PROTOCOL_1_26_40 */
+	public string $Nonce = "";
+
 	/** @required */
 	public int $UIProfile;
 }

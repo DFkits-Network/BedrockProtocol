@@ -17,11 +17,15 @@ namespace pocketmine\network\mcpe\protocol\types\recipe;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\CraftingDataPacket;
+use pocketmine\network\mcpe\protocol\PacketDecodeException;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 use Ramsey\Uuid\UuidInterface;
 use function count;
+use function array_chunk;
+use function max;
 
 final class ShapedRecipe extends RecipeWithTypeId{
 	private string $blockName;
@@ -41,7 +45,7 @@ final class ShapedRecipe extends RecipeWithTypeId{
 		string $blockType, //TODO: rename this
 		private int $priority,
 		private bool $symmetric,
-		private RecipeUnlockingRequirement $unlockingRequirement,
+		private ?RecipeUnlockingRequirement $unlockingRequirement,
 		private int $recipeNetId
 	){
 		parent::__construct($typeId);
@@ -102,7 +106,7 @@ final class ShapedRecipe extends RecipeWithTypeId{
 
 	public function isSymmetric() : bool{ return $this->symmetric; }
 
-	public function getUnlockingRequirement() : RecipeUnlockingRequirement{ return $this->unlockingRequirement; }
+	public function getUnlockingRequirement() : ?RecipeUnlockingRequirement{ return $this->unlockingRequirement; }
 
 	public function getRecipeNetId() : int{
 		return $this->recipeNetId;
@@ -113,9 +117,24 @@ final class ShapedRecipe extends RecipeWithTypeId{
 		$width = VarInt::readSignedInt($in);
 		$height = VarInt::readSignedInt($in);
 		$input = [];
-		for($row = 0; $row < $height; ++$row){
-			for($column = 0; $column < $width; ++$column){
-				$input[$row][$column] = CommonTypes::getRecipeIngredient($in, $protocolId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$ingredients = [];
+			$count = VarInt::readUnsignedInt($in);
+			if($count > 128){
+				throw new PacketDecodeException("Shaped recipe ingredient count $count exceeds the maximum of 128");
+			}
+			if($count !== $width * $height){
+				throw new PacketDecodeException("Shaped recipe ingredient count $count does not match {$width}x{$height}");
+			}
+			for($i = 0; $i < $count; ++$i){
+				$ingredients[] = RecipeIngredient::read($in, $protocolId);
+			}
+			$input = array_chunk($ingredients, max(1, $width));
+		}else{
+			for($row = 0; $row < $height; ++$row){
+				for($column = 0; $column < $width; ++$column){
+					$input[$row][$column] = CommonTypes::getRecipeIngredient($in, $protocolId);
+				}
 			}
 		}
 
@@ -129,23 +148,44 @@ final class ShapedRecipe extends RecipeWithTypeId{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_80){
 			$symmetric = CommonTypes::getBool($in);
 
-			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_0){
-				$unlockingRequirement = RecipeUnlockingRequirement::read($in);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				$hasUnlockingRequirement = CommonTypes::getBool($in);
+				$expectedUnlockingRequirement = $recipeType === CraftingDataPacket::ENTRY_SHAPED;
+				if($hasUnlockingRequirement !== $expectedUnlockingRequirement){
+					throw new PacketDecodeException("Unlocking requirement presence does not match shaped recipe type $recipeType");
+				}
+				$unlockingRequirement = $hasUnlockingRequirement ? RecipeUnlockingRequirement::read($in, $protocolId) : null;
+			}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_0){
+				$unlockingRequirement = RecipeUnlockingRequirement::read($in, $protocolId);
 			}
 		}
 
-		$recipeNetId = $protocolId >= ProtocolInfo::PROTOCOL_1_16_0 ? CommonTypes::readRecipeNetId($in) : 0;
+		$recipeNetId = CommonTypes::readRecipeNetId($in);
 
-		return new self($recipeType, $recipeId, $input, $output, $uuid, $block, $priority, $symmetric ?? true, $unlockingRequirement ?? new RecipeUnlockingRequirement(null), $recipeNetId);
+		$resolvedUnlockingRequirement = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
+			? ($unlockingRequirement ?? null)
+			: ($unlockingRequirement ?? new RecipeUnlockingRequirement(null));
+		return new self($recipeType, $recipeId, $input, $output, $uuid, $block, $priority, $symmetric ?? true, $resolvedUnlockingRequirement, $recipeNetId);
 	}
 
 	public function encode(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->recipeId);
 		VarInt::writeSignedInt($out, $this->getWidth());
 		VarInt::writeSignedInt($out, $this->getHeight());
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$ingredientCount = $this->getWidth() * $this->getHeight();
+			if($ingredientCount > 128){
+				throw new \InvalidArgumentException("Shaped recipe ingredient count exceeds the maximum of 128");
+			}
+			VarInt::writeUnsignedInt($out, $ingredientCount);
+		}
 		foreach($this->input as $row){
 			foreach($row as $ingredient){
-				CommonTypes::putRecipeIngredient($out, $ingredient, $protocolId);
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+					$ingredient->write($out, $protocolId);
+				}else{
+					CommonTypes::putRecipeIngredient($out, $ingredient, $protocolId);
+				}
 			}
 		}
 
@@ -160,13 +200,17 @@ final class ShapedRecipe extends RecipeWithTypeId{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_80){
 			CommonTypes::putBool($out, $this->symmetric);
 
-			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_0){
-				$this->unlockingRequirement->write($out);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				$hasUnlockingRequirement = $this->getTypeId() === CraftingDataPacket::ENTRY_SHAPED;
+				CommonTypes::putBool($out, $hasUnlockingRequirement);
+				if($hasUnlockingRequirement){
+					($this->unlockingRequirement ?? new RecipeUnlockingRequirement([]))->write($out, $protocolId);
+				}
+			}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_0){
+				($this->unlockingRequirement ?? new RecipeUnlockingRequirement(null))->write($out, $protocolId);
 			}
 		}
 
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
-			CommonTypes::writeRecipeNetId($out, $this->recipeNetId);
-		}
+		CommonTypes::writeRecipeNetId($out, $this->recipeNetId);
 	}
 }

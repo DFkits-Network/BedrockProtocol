@@ -23,18 +23,29 @@ use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 final class PlayerAuthInputVehicleInfo{
 
 	public function __construct(
-		private ?float $vehicleRotationX,
-		private ?float $vehicleRotationZ,
-		private int $predictedVehicleActorUniqueId
+		private ?float $vehicleRotationX = null,
+		private ?float $vehicleRotationZ = null,
+		private ?int $predictedVehicleActorUniqueId = null
 	){}
 
 	public function getVehicleRotationX() : ?float{ return $this->vehicleRotationX; }
 
 	public function getVehicleRotationZ() : ?float{ return $this->vehicleRotationZ; }
 
-	public function getPredictedVehicleActorUniqueId() : int{ return $this->predictedVehicleActorUniqueId; }
+	public function getPredictedVehicleActorUniqueId() : ?int{ return $this->predictedVehicleActorUniqueId; }
+
+	public function isNull() : bool{
+		return $this->vehicleRotationX === null && $this->vehicleRotationZ === null && $this->predictedVehicleActorUniqueId === null;
+	}
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$rotation = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::readOptional($in, fn(ByteBufferReader $in) => [LE::readFloat($in), LE::readFloat($in)]));
+			$predictedVehicleActorUniqueId = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::readOptional($in, CommonTypes::getActorUniqueId(...)));
+
+			return new self($rotation[0] ?? null, $rotation[1] ?? null, $predictedVehicleActorUniqueId);
+		}
+
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_70){
 			$vehicleRotationX = LE::readFloat($in);
 			$vehicleRotationZ = LE::readFloat($in);
@@ -45,10 +56,20 @@ final class PlayerAuthInputVehicleInfo{
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$rotation = $this->vehicleRotationX !== null && $this->vehicleRotationZ !== null ? [$this->vehicleRotationX, $this->vehicleRotationZ] : null;
+			CommonTypes::writeOptional($out, $rotation, fn(ByteBufferWriter $out, array $v) => CommonTypes::writeOptional($out, $v, function(ByteBufferWriter $out, array $rotation) : void{
+				LE::writeFloat($out, $rotation[0]);
+				LE::writeFloat($out, $rotation[1]);
+			}));
+			CommonTypes::writeOptional($out, $this->predictedVehicleActorUniqueId, fn(ByteBufferWriter $out, int $v) => CommonTypes::writeOptional($out, $v, CommonTypes::putActorUniqueId(...)));
+			return;
+		}
+
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_70){
 			LE::writeFloat($out, $this->vehicleRotationX ?? throw new \InvalidArgumentException("vehicleRotationX must be set for 1.20.70+"));
 			LE::writeFloat($out, $this->vehicleRotationZ ?? throw new \InvalidArgumentException("vehicleRotationZ must be set for 1.20.70+"));
 		}
-		CommonTypes::putActorUniqueId($out, $this->predictedVehicleActorUniqueId);
+		CommonTypes::putActorUniqueId($out, $this->predictedVehicleActorUniqueId ?? throw new \InvalidArgumentException("predictedVehicleActorUniqueId must be set"));
 	}
 }

@@ -96,6 +96,10 @@ final class ClientDataToSkinDataHelper{
 			true, //assume this is true? there's no field for it ...
 			$clientData->OverrideSkin ?? true,
 			$clientData->SkinGeometryName ?? null,
+			isset($clientData->TrustedSkin) ?
+				($clientData->TrustedSkin ? SkinData::TRUSTED_SKIN_FLAG_TRUE : SkinData::TRUSTED_SKIN_FLAG_UNSET) :
+				SkinData::TRUSTED_SKIN_FLAG_TRUE,
+			$clientData->ProfileHash ?? "",
 		);
 	}
 }

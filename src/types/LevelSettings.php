@@ -122,7 +122,9 @@ final class LevelSettings{
 			$this->exportedFromEditorMode = CommonTypes::getBool($in);
 		}
 		$this->time = VarInt::readSignedInt($in);
-		$this->eduEditionOffer = VarInt::readSignedInt($in);
+		$this->eduEditionOffer = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ?
+			VarInt::readUnsignedInt($in) :
+			VarInt::readSignedInt($in);
 		$this->hasEduFeaturesEnabled = CommonTypes::getBool($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
 			$this->eduProductUUID = CommonTypes::getString($in);
@@ -142,7 +144,9 @@ final class LevelSettings{
 			new Experiments([], false);
 		$this->hasBonusChestEnabled = CommonTypes::getBool($in);
 		$this->hasStartWithMapEnabled = CommonTypes::getBool($in);
-		$this->defaultPlayerPermission = VarInt::readSignedInt($in);
+		$this->defaultPlayerPermission = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ?
+			Byte::readUnsigned($in) :
+			VarInt::readSignedInt($in);
 		$this->serverChunkTickRadius = LE::readSignedInt($in); //doesn't make sense for this to be signed, but that's what the spec says
 		$this->hasLockedBehaviorPack = CommonTypes::getBool($in);
 		$this->hasLockedResourcePack = CommonTypes::getBool($in);
@@ -216,7 +220,11 @@ final class LevelSettings{
 			CommonTypes::putBool($out, $this->exportedFromEditorMode);
 		}
 		VarInt::writeSignedInt($out, $this->time);
-		VarInt::writeSignedInt($out, $this->eduEditionOffer);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			VarInt::writeUnsignedInt($out, $this->eduEditionOffer);
+		}else{
+			VarInt::writeSignedInt($out, $this->eduEditionOffer);
+		}
 		CommonTypes::putBool($out, $this->hasEduFeaturesEnabled);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0){
 			CommonTypes::putString($out, $this->eduProductUUID);
@@ -230,13 +238,18 @@ final class LevelSettings{
 		VarInt::writeSignedInt($out, $this->platformBroadcastMode);
 		CommonTypes::putBool($out, $this->commandsEnabled);
 		CommonTypes::putBool($out, $this->isTexturePacksRequired);
-		CommonTypes::putGameRules($out, $protocolId, $this->gameRules, true);
+		// 1.26.40 StartGame uses the non-StartGame int gamerule encoding (LE)
+		CommonTypes::putGameRules($out, $protocolId, $this->gameRules, $protocolId < ProtocolInfo::PROTOCOL_1_26_40);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
 			$this->experiments->write($out);
 		}
 		CommonTypes::putBool($out, $this->hasBonusChestEnabled);
 		CommonTypes::putBool($out, $this->hasStartWithMapEnabled);
-		VarInt::writeSignedInt($out, $this->defaultPlayerPermission);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			Byte::writeUnsigned($out, $this->defaultPlayerPermission);
+		}else{
+			VarInt::writeSignedInt($out, $this->defaultPlayerPermission);
+		}
 		LE::writeSignedInt($out, $this->serverChunkTickRadius); //doesn't make sense for this to be signed, but that's what the spec says
 		CommonTypes::putBool($out, $this->hasLockedBehaviorPack);
 		CommonTypes::putBool($out, $this->hasLockedResourcePack);

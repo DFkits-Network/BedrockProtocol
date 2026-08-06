@@ -109,7 +109,9 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 			$this->worldTemplateVersion = CommonTypes::getString($in);
 		}
 
-		$resourcePackCount = LE::readUnsignedShort($in);
+		$resourcePackCount = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ?
+			VarInt::readUnsignedInt($in) :
+			LE::readUnsignedShort($in);
 		while($resourcePackCount-- > 0){
 			$this->resourcePackEntries[] = ResourcePackInfoEntry::read($in, $protocolId);
 		}
@@ -146,7 +148,11 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 			CommonTypes::putUUID($out, $this->worldTemplateId);
 			CommonTypes::putString($out, $this->worldTemplateVersion);
 		}
-		LE::writeUnsignedShort($out, count($this->resourcePackEntries));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			VarInt::writeUnsignedInt($out, count($this->resourcePackEntries));
+		}else{
+			LE::writeUnsignedShort($out, count($this->resourcePackEntries));
+		}
 		foreach($this->resourcePackEntries as $entry){
 			$entry->write($out, $protocolId);
 		}

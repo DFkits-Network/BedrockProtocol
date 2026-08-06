@@ -51,8 +51,8 @@ class InventorySlotPacket extends DataPacket implements ClientboundPacket{
 		$this->inventorySlot = VarInt::readUnsignedInt($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			$this->containerName = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => FullContainerName::read($in, $protocolId));
-			$this->storage = CommonTypes::readOptional($in, CommonTypes::getNetworkItemStackDescriptor(...));
-			$this->item = CommonTypes::getNetworkItemStackDescriptor($in);
+			$this->storage = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::getNetworkItemStackDescriptor($in, $protocolId));
+			$this->item = CommonTypes::getNetworkItemStackDescriptor($in, $protocolId);
 		}else{
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
 				$this->containerName = FullContainerName::read($in, $protocolId);
@@ -73,8 +73,8 @@ class InventorySlotPacket extends DataPacket implements ClientboundPacket{
 		VarInt::writeUnsignedInt($out, $this->inventorySlot);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			CommonTypes::writeOptional($out, $this->containerName, fn(ByteBufferWriter $out, FullContainerName $v) => $v->write($out, $protocolId));
-			CommonTypes::writeOptional($out, $this->storage, CommonTypes::putNetworkItemStackDescriptor(...));
-			CommonTypes::putNetworkItemStackDescriptor($out, $this->item);
+			CommonTypes::writeOptional($out, $this->storage, fn(ByteBufferWriter $out, ItemStackWrapper $v) => CommonTypes::putNetworkItemStackDescriptor($out, $v, $protocolId));
+			CommonTypes::putNetworkItemStackDescriptor($out, $this->item, $protocolId);
 		}else{
 			if($this->containerName === null){
 				throw new \InvalidArgumentException("ContainerName must be set for protocol $protocolId");

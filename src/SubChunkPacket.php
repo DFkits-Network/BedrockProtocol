@@ -56,11 +56,16 @@ class SubChunkPacket extends DataPacket implements ClientboundPacket{
 		$newSubChunkFormat = $protocolId >= ProtocolInfo::PROTOCOL_1_18_10;
 		$cacheEnabled = $newSubChunkFormat ? CommonTypes::getBool($in) : $protocolId === ProtocolInfo::PROTOCOL_1_18_0;
 		$this->dimension = VarInt::readSignedInt($in);
-		$this->baseSubChunkPosition = $newSubChunkFormat ?
-			SubChunkPosition::readVarInts($in) :
-			new SubChunkPosition(0, 0, 0);
-
-		$count = $newSubChunkFormat ? LE::readUnsignedInt($in) : 1;
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->baseSubChunkPosition = SubChunkPosition::readFixedInts($in);
+			$count = VarInt::readUnsignedInt($in);
+		}elseif($newSubChunkFormat){
+			$this->baseSubChunkPosition = SubChunkPosition::readVarInts($in);
+			$count = LE::readUnsignedInt($in);
+		}else{
+			$this->baseSubChunkPosition = new SubChunkPosition(0, 0, 0);
+			$count = 1;
+		}
 		if($cacheEnabled){
 			$entries = [];
 			for($i = 0; $i < $count; $i++){
@@ -84,7 +89,10 @@ class SubChunkPacket extends DataPacket implements ClientboundPacket{
 			throw new \InvalidArgumentException("SubChunkPacket does not support blob hashes before protocol " . ProtocolInfo::PROTOCOL_1_18_0);
 		}
 		VarInt::writeSignedInt($out, $this->dimension);
-		if($newSubChunkFormat){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->baseSubChunkPosition->writeFixedInts($out);
+			VarInt::writeUnsignedInt($out, count($this->entries->getEntries()));
+		}elseif($newSubChunkFormat){
 			$this->baseSubChunkPosition->writeVarInts($out);
 			LE::writeUnsignedInt($out, count($this->entries->getEntries()));
 		}elseif(count($this->entries->getEntries()) !== 1){

@@ -16,7 +16,9 @@ namespace pocketmine\network\mcpe\protocol\types\inventory\stackrequest;
 
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\GetTypeIdFromConstTrait;
 
@@ -40,13 +42,17 @@ final class MineBlockStackRequestAction extends ItemStackRequestAction{
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$hotbarSlot = VarInt::readSignedInt($in);
 		$predictedDurability = VarInt::readSignedInt($in);
-		$stackId = CommonTypes::readItemStackNetIdVariant($in);
+		$stackId = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? LE::readSignedInt($in) : CommonTypes::readItemStackNetIdVariant($in);
 		return new self($hotbarSlot, $predictedDurability, $stackId);
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeSignedInt($out, $this->hotbarSlot);
 		VarInt::writeSignedInt($out, $this->predictedDurability);
-		CommonTypes::writeItemStackNetIdVariant($out, $this->stackId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			LE::writeSignedInt($out, $this->stackId);
+		}else{
+			CommonTypes::writeItemStackNetIdVariant($out, $this->stackId);
+		}
 	}
 }

@@ -34,6 +34,11 @@ use function count;
 class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::CRAFTING_DATA_PACKET;
 
+	/**
+	 * Internal recipe type IDs used by the PHP API / CraftingDataCache.
+	 * These match the pre-1.26.40 wire values. For 1.26.40+, map with
+	 * {@link self::internalTypeToWire()} / {@link self::wireTypeToInternal()}.
+	 */
 	public const ENTRY_SHAPELESS = 0;
 	public const ENTRY_SHAPED = 1;
 	public const ENTRY_FURNACE = 2;
@@ -44,6 +49,19 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	public const ENTRY_SHAPED_CHEMISTRY = 7;
 	public const ENTRY_SMITHING_TRANSFORM = 8;
 	public const ENTRY_SMITHING_TRIM = 9;
+
+	/**
+	 * 1.26.40+ wire recipe type IDs (bucketed format; furnace types removed).
+	 * SHAPED/SHAPELESS are swapped vs pre-1.26.40.
+	 */
+	public const WIRE_1_26_40_SHAPED = 0;
+	public const WIRE_1_26_40_SHAPELESS = 1;
+	public const WIRE_1_26_40_MULTI = 2;
+	public const WIRE_1_26_40_USER_DATA_SHAPELESS = 3;
+	public const WIRE_1_26_40_SHAPELESS_CHEMISTRY = 4;
+	public const WIRE_1_26_40_SHAPED_CHEMISTRY = 5;
+	public const WIRE_1_26_40_SMITHING_TRANSFORM = 6;
+	public const WIRE_1_26_40_SMITHING_TRIM = 7;
 
 	/** @var RecipeWithTypeId[] */
 	public array $recipesWithTypeIds = [];
@@ -72,22 +90,106 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 		return $result;
 	}
 
-	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$recipeCount = VarInt::readUnsignedInt($in);
-		$previousType = "none";
-		for($i = 0; $i < $recipeCount; ++$i){
-			$recipeType = VarInt::readSignedInt($in);
+	/**
+	 * Maps internal ENTRY_* type IDs to protocol wire values.
+	 */
+	public static function internalTypeToWire(int $internalType, int $protocolId) : int{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
+			return $internalType;
+		}
 
-			$this->recipesWithTypeIds[] = match($recipeType){
-				self::ENTRY_SHAPELESS, self::ENTRY_USER_DATA_SHAPELESS, self::ENTRY_SHAPELESS_CHEMISTRY => ShapelessRecipe::decode($recipeType, $in, $protocolId),
-				self::ENTRY_SHAPED, self::ENTRY_SHAPED_CHEMISTRY => ShapedRecipe::decode($recipeType, $in, $protocolId),
-				self::ENTRY_FURNACE, self::ENTRY_FURNACE_DATA => FurnaceRecipe::decode($recipeType, $in, $protocolId),
-				self::ENTRY_MULTI => MultiRecipe::decode($recipeType, $in, $protocolId),
-				self::ENTRY_SMITHING_TRANSFORM => SmithingTransformRecipe::decode($recipeType, $in, $protocolId),
-				self::ENTRY_SMITHING_TRIM => SmithingTrimRecipe::decode($recipeType, $in),
-				default => throw new PacketDecodeException("Unhandled recipe type $recipeType (previous was $previousType)"),
-			};
-			$previousType = $recipeType;
+		return match($internalType){
+			self::ENTRY_SHAPED => self::WIRE_1_26_40_SHAPED,
+			self::ENTRY_SHAPELESS => self::WIRE_1_26_40_SHAPELESS,
+			self::ENTRY_MULTI => self::WIRE_1_26_40_MULTI,
+			self::ENTRY_USER_DATA_SHAPELESS => self::WIRE_1_26_40_USER_DATA_SHAPELESS,
+			self::ENTRY_SHAPELESS_CHEMISTRY => self::WIRE_1_26_40_SHAPELESS_CHEMISTRY,
+			self::ENTRY_SHAPED_CHEMISTRY => self::WIRE_1_26_40_SHAPED_CHEMISTRY,
+			self::ENTRY_SMITHING_TRANSFORM => self::WIRE_1_26_40_SMITHING_TRANSFORM,
+			self::ENTRY_SMITHING_TRIM => self::WIRE_1_26_40_SMITHING_TRIM,
+			default => throw new \InvalidArgumentException("Recipe type $internalType has no 1.26.40 wire mapping"),
+		};
+	}
+
+	/**
+	 * Maps protocol wire values back to internal ENTRY_* type IDs.
+	 */
+	public static function wireTypeToInternal(int $wireType, int $protocolId) : int{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
+			return $wireType;
+		}
+
+		return match($wireType){
+			self::WIRE_1_26_40_SHAPED => self::ENTRY_SHAPED,
+			self::WIRE_1_26_40_SHAPELESS => self::ENTRY_SHAPELESS,
+			self::WIRE_1_26_40_MULTI => self::ENTRY_MULTI,
+			self::WIRE_1_26_40_USER_DATA_SHAPELESS => self::ENTRY_USER_DATA_SHAPELESS,
+			self::WIRE_1_26_40_SHAPELESS_CHEMISTRY => self::ENTRY_SHAPELESS_CHEMISTRY,
+			self::WIRE_1_26_40_SHAPED_CHEMISTRY => self::ENTRY_SHAPED_CHEMISTRY,
+			self::WIRE_1_26_40_SMITHING_TRANSFORM => self::ENTRY_SMITHING_TRANSFORM,
+			self::WIRE_1_26_40_SMITHING_TRIM => self::ENTRY_SMITHING_TRIM,
+			default => throw new PacketDecodeException("Unknown 1.26.40 recipe wire type $wireType"),
+		};
+	}
+
+	/**
+	 * Wire order of recipe buckets for protocol 1.26.40+ (by wire type ID).
+	 * @return list<int>
+	 */
+	private static function getRecipeBucketWireOrder() : array{
+		return [
+			self::WIRE_1_26_40_SHAPED,
+			self::WIRE_1_26_40_SHAPELESS,
+			self::WIRE_1_26_40_MULTI,
+			self::WIRE_1_26_40_USER_DATA_SHAPELESS,
+			self::WIRE_1_26_40_SHAPELESS_CHEMISTRY,
+			self::WIRE_1_26_40_SHAPED_CHEMISTRY,
+			self::WIRE_1_26_40_SMITHING_TRANSFORM,
+			self::WIRE_1_26_40_SMITHING_TRIM,
+		];
+	}
+
+	private static function decodeRecipe(int $internalType, ByteBufferReader $in, int $protocolId) : RecipeWithTypeId{
+		return match($internalType){
+			self::ENTRY_SHAPELESS, self::ENTRY_USER_DATA_SHAPELESS, self::ENTRY_SHAPELESS_CHEMISTRY => ShapelessRecipe::decode($internalType, $in, $protocolId),
+			self::ENTRY_SHAPED, self::ENTRY_SHAPED_CHEMISTRY => ShapedRecipe::decode($internalType, $in, $protocolId),
+			self::ENTRY_FURNACE, self::ENTRY_FURNACE_DATA => FurnaceRecipe::decode($internalType, $in, $protocolId),
+			self::ENTRY_MULTI => MultiRecipe::decode($internalType, $in, $protocolId),
+			self::ENTRY_SMITHING_TRANSFORM => SmithingTransformRecipe::decode($internalType, $in, $protocolId),
+			self::ENTRY_SMITHING_TRIM => SmithingTrimRecipe::decode($internalType, $in, $protocolId),
+			default => throw new PacketDecodeException("Unhandled recipe type $internalType"),
+		};
+	}
+
+	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$decoders = [
+				self::ENTRY_SHAPED => ShapedRecipe::decode(...),
+				self::ENTRY_SHAPELESS => ShapelessRecipe::decode(...),
+				self::ENTRY_MULTI => MultiRecipe::decode(...),
+				self::ENTRY_USER_DATA_SHAPELESS => ShapelessRecipe::decode(...),
+				self::ENTRY_SHAPELESS_CHEMISTRY => ShapelessRecipe::decode(...),
+				self::ENTRY_SHAPED_CHEMISTRY => ShapedRecipe::decode(...),
+				self::ENTRY_SMITHING_TRANSFORM => SmithingTransformRecipe::decode(...),
+				self::ENTRY_SMITHING_TRIM => SmithingTrimRecipe::decode(...),
+			];
+			foreach($decoders as $typeId => $decoder){
+				for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; ++$i){
+					$this->recipesWithTypeIds[] = $decoder($typeId, $in, $protocolId);
+				}
+			}
+		}else{
+			$recipeCount = VarInt::readUnsignedInt($in);
+			$previousType = "none";
+			for($i = 0; $i < $recipeCount; ++$i){
+				$recipeType = VarInt::readSignedInt($in);
+				try{
+					$this->recipesWithTypeIds[] = self::decodeRecipe($recipeType, $in, $protocolId);
+				}catch(PacketDecodeException $e){
+					throw new PacketDecodeException($e->getMessage() . " (previous was $previousType)", 0, $e);
+				}
+				$previousType = (string) $recipeType;
+			}
 		}
 		for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; ++$i){
 			$inputId = VarInt::readSignedInt($in);
@@ -121,10 +223,37 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		VarInt::writeUnsignedInt($out, count($this->recipesWithTypeIds));
-		foreach($this->recipesWithTypeIds as $d){
-			VarInt::writeSignedInt($out, $d->getTypeId());
-			$d->encode($out, $protocolId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			// Bucketed by internal type in wire order (SHAPED first; furnace types removed)
+			$buckets = [
+				self::ENTRY_SHAPED => [],
+				self::ENTRY_SHAPELESS => [],
+				self::ENTRY_MULTI => [],
+				self::ENTRY_USER_DATA_SHAPELESS => [],
+				self::ENTRY_SHAPELESS_CHEMISTRY => [],
+				self::ENTRY_SHAPED_CHEMISTRY => [],
+				self::ENTRY_SMITHING_TRANSFORM => [],
+				self::ENTRY_SMITHING_TRIM => [],
+			];
+			foreach($this->recipesWithTypeIds as $recipe){
+				$typeId = $recipe->getTypeId();
+				if(!isset($buckets[$typeId])){
+					throw new \InvalidArgumentException("Unhandled recipe type $typeId for protocol 1.26.40");
+				}
+				$buckets[$typeId][] = $recipe;
+			}
+			foreach($buckets as $recipes){
+				VarInt::writeUnsignedInt($out, count($recipes));
+				foreach($recipes as $recipe){
+					$recipe->encode($out, $protocolId);
+				}
+			}
+		}else{
+			VarInt::writeUnsignedInt($out, count($this->recipesWithTypeIds));
+			foreach($this->recipesWithTypeIds as $d){
+				VarInt::writeSignedInt($out, $d->getTypeId());
+				$d->encode($out, $protocolId);
+			}
 		}
 		VarInt::writeUnsignedInt($out, count($this->potionTypeRecipes));
 		foreach($this->potionTypeRecipes as $recipe){
