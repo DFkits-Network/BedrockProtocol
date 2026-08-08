@@ -189,7 +189,7 @@ class ServerboundDiagnosticsPacket extends DataPacket implements ServerboundPack
 					}
 					$this->whiskerScopes = [];
 					for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; $i++){
-						$this->whiskerScopes[] = WhiskerScopeDataSummary::read($in, $protocolId);
+						$this->whiskerScopes[] = WhiskerScopeDataSummary::read($in);
 					}
 				}
 			}
@@ -233,7 +233,7 @@ class ServerboundDiagnosticsPacket extends DataPacket implements ServerboundPack
 					}
 					VarInt::writeUnsignedInt($out, count($this->whiskerScopes));
 					foreach($this->whiskerScopes as $value){
-						$value->write($out, $protocolId);
+						$value->write($out);
 					}
 				}
 			}

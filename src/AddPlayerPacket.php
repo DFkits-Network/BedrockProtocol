@@ -116,7 +116,7 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		$this->pitch = LE::readFloat($in);
 		$this->yaw = LE::readFloat($in);
 		$this->headYaw = LE::readFloat($in);
-		$this->item = $protocolId >= ProtocolInfo::PROTOCOL_1_26_30 ?
+		$this->item = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ?
 			CommonTypes::getNetworkItemStackDescriptor($in, $protocolId) :
 			CommonTypes::getItemStackWrapper($in, $protocolId);
 		$this->gameMode = $protocolId >= ProtocolInfo::PROTOCOL_1_18_30 ?
@@ -167,7 +167,7 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		LE::writeFloat($out, $this->pitch);
 		LE::writeFloat($out, $this->yaw);
 		LE::writeFloat($out, $this->headYaw);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->item, $protocolId);
 		}else{
 			CommonTypes::putItemStackWrapper($out, $this->item, $protocolId);

@@ -28,6 +28,7 @@ class CreativeContentPacket extends DataPacket implements ClientboundPacket{
 	public const CATEGORY_NATURE = 2;
 	public const CATEGORY_EQUIPMENT = 3;
 	public const CATEGORY_ITEMS = 4;
+	public const CATEGORY_ITEM_COMMAND_ONLY = 5;
 
 	/** @var CreativeGroupEntry[] */
 	private array $groups;

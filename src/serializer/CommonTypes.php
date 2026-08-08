@@ -126,17 +126,12 @@ final class CommonTypes{
 		$out->writeByteArray(strrev(substr($bytes, 8, 8)));
 	}
 
-	/** @throws DataDecodeException */
 	/**
-	 * @return array<int, string>
-	 */
-	/**
-	 * Wire enum values start at 1 (0 is reserved/unlisted). Confirmed against 1.26.40 captures.
-	 *
 	 * @return array<int, string>
 	 */
 	private static function getPersonaPieceTypeNames() : array{
 		return [
+			0 => "persona_unknown",
 			1 => PersonaSkinPiece::PIECE_TYPE_PERSONA_SKELETON,
 			2 => PersonaSkinPiece::PIECE_TYPE_PERSONA_BODY,
 			3 => PersonaSkinPiece::PIECE_TYPE_PERSONA_SKIN,
@@ -145,7 +140,7 @@ final class CommonTypes{
 			6 => "persona_dress",
 			7 => PersonaSkinPiece::PIECE_TYPE_PERSONA_TOP,
 			8 => "persona_high_pants",
-			9 => "persona_hands",
+			9 => "persona_hand",
 			10 => "persona_outerwear",
 			11 => PersonaSkinPiece::PIECE_TYPE_PERSONA_FACIAL_HAIR,
 			12 => PersonaSkinPiece::PIECE_TYPE_PERSONA_MOUTH,
@@ -164,6 +159,7 @@ final class CommonTypes{
 			25 => "persona_capes",
 			26 => "persona_classic_skin",
 			27 => "persona_emote",
+			28 => "unsupported",
 		];
 	}
 
@@ -173,10 +169,10 @@ final class CommonTypes{
 
 	private static function personaPieceTypeToInt(string $pieceType) : int{
 		$normalized = strtolower($pieceType);
-		if($normalized === "persona_hand"){
-			$normalized = "persona_hands";
+		if($normalized === "hands" || $normalized === "persona_hands"){
+			$normalized = "persona_hand";
 		}
-		if(!str_starts_with($normalized, "persona_") && $normalized !== ""){
+		if(!str_starts_with($normalized, "persona_") && $normalized !== "" && $normalized !== "unsupported"){
 			$normalized = "persona_" . $normalized;
 		}
 		$flipped = array_flip(self::getPersonaPieceTypeNames());
@@ -185,13 +181,20 @@ final class CommonTypes{
 
 	private static function personaPieceTypeToBareString(string $pieceType) : string{
 		$normalized = strtolower($pieceType);
-		return str_starts_with($normalized, "persona_") ? substr($normalized, strlen("persona_")) : $normalized;
+		$bare = str_starts_with($normalized, "persona_") ? substr($normalized, strlen("persona_")) : $normalized;
+		return $bare === "hand" ? "hands" : $bare;
 	}
 
 	private static function personaPieceTypeFromBareString(string $bare) : string{
 		$normalized = strtolower($bare);
 		if($normalized === ""){
 			return "";
+		}
+		if($normalized === "hands"){
+			return "persona_hand";
+		}
+		if($normalized === "unsupported"){
+			return "unsupported";
 		}
 		if(str_starts_with($normalized, "persona_")){
 			return $normalized;
@@ -681,6 +684,10 @@ final class CommonTypes{
 
 	/** @throws DataDecodeException */
 	public static function getItemStackWrapper(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL, bool $hasLegacyNetId = false) : ItemStackWrapper{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			return self::getNetworkItemStackDescriptor($in, $protocolId);
+		}
+
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0 && $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && $hasLegacyNetId){
 			$stackId = self::readServerItemStackId($in);
 			return new ItemStackWrapper($stackId, self::getItemStackWithoutStackId($in, $protocolId));
@@ -704,6 +711,11 @@ final class CommonTypes{
 	}
 
 	public static function putItemStackWrapper(ByteBufferWriter $out, ItemStackWrapper $itemStackWrapper, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL, bool $hasLegacyNetId = false) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			self::putNetworkItemStackDescriptor($out, $itemStackWrapper, $protocolId);
+			return;
+		}
+
 		$itemStack = $itemStackWrapper->getItemStack();
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_0 && $protocolId < ProtocolInfo::PROTOCOL_1_16_220 && $hasLegacyNetId){
 			self::writeServerItemStackId($out, $itemStackWrapper->getStackId());
@@ -1186,7 +1198,9 @@ final class CommonTypes{
 
 		$result->structureBlockType = VarInt::readSignedInt($in);
 		$result->structureSettings = self::getStructureSettings($in, $protocolId);
-		$result->structureRedstoneSaveMode = VarInt::readSignedInt($in);
+		$result->structureRedstoneSaveMode = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ?
+			Byte::readUnsigned($in) :
+			VarInt::readSignedInt($in);
 
 		return $result;
 	}
@@ -1203,7 +1217,11 @@ final class CommonTypes{
 
 		VarInt::writeSignedInt($out, $structureEditorData->structureBlockType);
 		self::putStructureSettings($out, $structureEditorData->structureSettings, $protocolId);
-		VarInt::writeSignedInt($out, $structureEditorData->structureRedstoneSaveMode);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			Byte::writeUnsigned($out, $structureEditorData->structureRedstoneSaveMode);
+		}else{
+			VarInt::writeSignedInt($out, $structureEditorData->structureRedstoneSaveMode);
+		}
 	}
 
 	/** @throws PacketDecodeException */

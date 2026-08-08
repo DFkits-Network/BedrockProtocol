@@ -71,9 +71,20 @@ class PlayerUpdateEntityOverridesPacket extends DataPacket implements Clientboun
 	public function getFloatOverrideValue() : ?float{ return $this->floatOverrideValue; }
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
+		$this->actorRuntimeId = CommonTypes::getActorUniqueId($in);
 		$this->propertyIndex = VarInt::readUnsignedInt($in);
-		$this->updateType = OverrideUpdateType::fromPacket(Byte::readUnsigned($in));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$variantType = VarInt::readUnsignedInt($in);
+			$legacyType = Byte::readUnsigned($in);
+			if($variantType !== $legacyType){
+				throw new PacketDecodeException("Mismatched entity override update types $variantType and $legacyType");
+			}
+			$this->updateType = OverrideUpdateType::fromPacket($variantType);
+		}else{
+			$this->updateType = OverrideUpdateType::fromPacket(Byte::readUnsigned($in));
+		}
+		$this->intOverrideValue = null;
+		$this->floatOverrideValue = null;
 		if($this->updateType === OverrideUpdateType::SET_INT_OVERRIDE){
 			$this->intOverrideValue = LE::readSignedInt($in);
 		}elseif($this->updateType === OverrideUpdateType::SET_FLOAT_OVERRIDE){
@@ -82,8 +93,11 @@ class PlayerUpdateEntityOverridesPacket extends DataPacket implements Clientboun
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
+		CommonTypes::putActorUniqueId($out, $this->actorRuntimeId);
 		VarInt::writeUnsignedInt($out, $this->propertyIndex);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			VarInt::writeUnsignedInt($out, $this->updateType->value);
+		}
 		Byte::writeUnsigned($out, $this->updateType->value);
 		if($this->updateType === OverrideUpdateType::SET_INT_OVERRIDE){
 			if($this->intOverrideValue === null){ // this should never be the case

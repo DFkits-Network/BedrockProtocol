@@ -26,9 +26,10 @@ final class PlayerBlockActionWithBlockInfo implements PlayerBlockAction{
 	public function __construct(
 		private int $actionType,
 		private BlockPosition $blockPosition,
-		private int $face
+		private int $face,
+		bool $allowAnyActionType = false
 	){
-		if(!self::isValidActionType($actionType)){
+		if(!$allowAnyActionType && !self::isValidActionType($actionType)){
 			throw new \InvalidArgumentException("Invalid action type for " . self::class);
 		}
 	}
@@ -39,10 +40,10 @@ final class PlayerBlockActionWithBlockInfo implements PlayerBlockAction{
 
 	public function getFace() : int{ return $this->face; }
 
-	public static function read(ByteBufferReader $in, int $actionType) : self{
+	public static function read(ByteBufferReader $in, int $actionType, bool $allowAnyActionType = false) : self{
 		$blockPosition = CommonTypes::getBlockPosition($in);
 		$face = VarInt::readSignedInt($in);
-		return new self($actionType, $blockPosition, $face);
+		return new self($actionType, $blockPosition, $face, $allowAnyActionType);
 	}
 
 	public function write(ByteBufferWriter $out) : void{

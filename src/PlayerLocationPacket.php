@@ -73,7 +73,7 @@ class PlayerLocationPacket extends DataPacket implements ClientboundPacket{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			CommonTypes::putActorUniqueId($out, $this->actorUniqueId);
 			VarInt::writeUnsignedInt($out, $this->type->value);
-			VarInt::writeSignedInt($out, 0);
+			VarInt::writeSignedInt($out, $this->type->value);
 		}else{
 			LE::writeUnsignedInt($out, $this->type->value);
 			CommonTypes::putActorUniqueId($out, $this->actorUniqueId);

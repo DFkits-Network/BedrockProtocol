@@ -36,7 +36,11 @@ final class PresenceInfo{
 	public function getRichPresenceId() : string{ return $this->richPresenceId; }
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			//The v2168 helper uses the legacy pair of required strings again.
+			$experienceName = CommonTypes::getString($in);
+			$worldName = CommonTypes::getString($in);
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			$experienceName = CommonTypes::readOptional($in, CommonTypes::getString(...));
 			$worldName = CommonTypes::readOptional($in, CommonTypes::getString(...));
 			$richPresenceId = CommonTypes::getString($in);
@@ -49,7 +53,10 @@ final class PresenceInfo{
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::putString($out, $this->experienceName ?? "");
+			CommonTypes::putString($out, $this->worldName ?? "");
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			CommonTypes::writeOptional($out, $this->experienceName, CommonTypes::putString(...));
 			CommonTypes::writeOptional($out, $this->worldName, CommonTypes::putString(...));
 			CommonTypes::putString($out, $this->richPresenceId);

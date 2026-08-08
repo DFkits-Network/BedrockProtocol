@@ -132,23 +132,6 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 		};
 	}
 
-	/**
-	 * Wire order of recipe buckets for protocol 1.26.40+ (by wire type ID).
-	 * @return list<int>
-	 */
-	private static function getRecipeBucketWireOrder() : array{
-		return [
-			self::WIRE_1_26_40_SHAPED,
-			self::WIRE_1_26_40_SHAPELESS,
-			self::WIRE_1_26_40_MULTI,
-			self::WIRE_1_26_40_USER_DATA_SHAPELESS,
-			self::WIRE_1_26_40_SHAPELESS_CHEMISTRY,
-			self::WIRE_1_26_40_SHAPED_CHEMISTRY,
-			self::WIRE_1_26_40_SMITHING_TRANSFORM,
-			self::WIRE_1_26_40_SMITHING_TRIM,
-		];
-	}
-
 	private static function decodeRecipe(int $internalType, ByteBufferReader $in, int $protocolId) : RecipeWithTypeId{
 		return match($internalType){
 			self::ENTRY_SHAPELESS, self::ENTRY_USER_DATA_SHAPELESS, self::ENTRY_SHAPELESS_CHEMISTRY => ShapelessRecipe::decode($internalType, $in, $protocolId),

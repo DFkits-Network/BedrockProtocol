@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol;
 
+use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
@@ -346,11 +347,9 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 				$max = VarInt::readUnsignedInt($in);
 				for($i = 0; $i < $max; ++$i){
 					$actionType = VarInt::readSignedInt($in);
-					$blockActions[] = match(true){
-						PlayerBlockActionWithBlockInfo::isValidActionType($actionType, true) => PlayerBlockActionWithBlockInfo::read($in, $actionType),
-						PlayerBlockActionWithoutBlockInfo::isValidActionType($actionType) => new PlayerBlockActionWithoutBlockInfo($actionType),
-						default => throw new PacketDecodeException("Unexpected block action type $actionType")
-					};
+					//Cereal always includes position and face for every v2168 block action,
+					//including action types which had no extra payload in older protocols.
+					$blockActions[] = PlayerBlockActionWithBlockInfo::read($in, $actionType, true);
 				}
 				return $blockActions;
 			}));
@@ -443,16 +442,22 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 			CommonTypes::putVector3($out, $this->delta);
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			CommonTypes::writeOptional($out, $this->itemInteractionData, fn(ByteBufferWriter $out, ItemInteractionData $v) => CommonTypes::writeOptional($out, $v, fn(ByteBufferWriter $out, ItemInteractionData $v) => $v->write($out, $protocolId)));
-			CommonTypes::writeOptional($out, $this->itemStackRequest, fn(ByteBufferWriter $out, ItemStackRequest $v) => CommonTypes::writeOptional($out, $v, fn(ByteBufferWriter $out, ItemStackRequest $v) => $v->write($out, $protocolId)));
-			CommonTypes::writeOptional($out, $this->blockActions, fn(ByteBufferWriter $out, array $v) => CommonTypes::writeOptional($out, $v, function(ByteBufferWriter $out, array $blockActions) : void{
+			Byte::writeUnsigned($out, 1);
+			CommonTypes::writeOptional($out, $this->itemInteractionData, fn(ByteBufferWriter $out, ItemInteractionData $v) => $v->write($out, $protocolId));
+			Byte::writeUnsigned($out, 1);
+			CommonTypes::writeOptional($out, $this->itemStackRequest, fn(ByteBufferWriter $out, ItemStackRequest $v) => $v->write($out, $protocolId));
+			Byte::writeUnsigned($out, 1);
+			CommonTypes::writeOptional($out, $this->blockActions, function(ByteBufferWriter $out, array $blockActions) : void{
 				VarInt::writeUnsignedInt($out, count($blockActions));
 				/** @var PlayerBlockAction[] $blockActions */
 				foreach($blockActions as $blockAction){
+					if(!$blockAction instanceof PlayerBlockActionWithBlockInfo){
+						throw new \LogicException("Protocol 1.26.40 block actions must include block position and face");
+					}
 					VarInt::writeSignedInt($out, $blockAction->getActionType());
 					$blockAction->write($out);
 				}
-			}));
+			});
 			($this->vehicleInfo ?? new PlayerAuthInputVehicleInfo())->write($out, $protocolId);
 		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_16_210){
 			if($this->itemInteractionData !== null){

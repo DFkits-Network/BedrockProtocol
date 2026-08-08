@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types;
 
+use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
@@ -58,11 +59,15 @@ final class PlayerAuthInputVehicleInfo{
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$rotation = $this->vehicleRotationX !== null && $this->vehicleRotationZ !== null ? [$this->vehicleRotationX, $this->vehicleRotationZ] : null;
-			CommonTypes::writeOptional($out, $rotation, fn(ByteBufferWriter $out, array $v) => CommonTypes::writeOptional($out, $v, function(ByteBufferWriter $out, array $rotation) : void{
+			//The outer optionals are the always-present cereal conditionals. The inner
+			//optionals carry whether the vehicle fields are present for this input tick.
+			Byte::writeUnsigned($out, 1);
+			CommonTypes::writeOptional($out, $rotation, function(ByteBufferWriter $out, array $rotation) : void{
 				LE::writeFloat($out, $rotation[0]);
 				LE::writeFloat($out, $rotation[1]);
-			}));
-			CommonTypes::writeOptional($out, $this->predictedVehicleActorUniqueId, fn(ByteBufferWriter $out, int $v) => CommonTypes::writeOptional($out, $v, CommonTypes::putActorUniqueId(...)));
+			});
+			Byte::writeUnsigned($out, 1);
+			CommonTypes::writeOptional($out, $this->predictedVehicleActorUniqueId, CommonTypes::putActorUniqueId(...));
 			return;
 		}
 

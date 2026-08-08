@@ -64,7 +64,7 @@ class AddItemActorPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->actorUniqueId = CommonTypes::getActorUniqueId($in);
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
-		$this->item = $protocolId >= ProtocolInfo::PROTOCOL_1_26_30 ?
+		$this->item = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ?
 			CommonTypes::getNetworkItemStackDescriptor($in, $protocolId) :
 			CommonTypes::getItemStackWrapper($in, $protocolId);
 		$this->position = CommonTypes::getVector3($in);
@@ -76,7 +76,7 @@ class AddItemActorPacket extends DataPacket implements ClientboundPacket{
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorUniqueId($out, $this->actorUniqueId);
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->item, $protocolId);
 		}else{
 			CommonTypes::putItemStackWrapper($out, $this->item, $protocolId);
