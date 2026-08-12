@@ -23,8 +23,8 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 use Ramsey\Uuid\UuidInterface;
-use function count;
 use function array_chunk;
+use function count;
 use function max;
 
 final class ShapedRecipe extends RecipeWithTypeId{

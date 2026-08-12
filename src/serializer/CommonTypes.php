@@ -54,7 +54,6 @@ use pocketmine\network\mcpe\protocol\types\recipe\ComplexAliasItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\IntIdMetaItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\ItemDescriptorType;
 use pocketmine\network\mcpe\protocol\types\recipe\MolangItemDescriptor;
-use pocketmine\network\mcpe\protocol\types\recipe\NameItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\RecipeIngredient;
 use pocketmine\network\mcpe\protocol\types\recipe\StringIdMetaItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\TagItemDescriptor;
@@ -72,10 +71,10 @@ use function array_flip;
 use function array_values;
 use function count;
 use function is_numeric;
-use function strlen;
 use function str_starts_with;
-use function strtolower;
+use function strlen;
 use function strrev;
+use function strtolower;
 use function substr;
 
 final class CommonTypes{
