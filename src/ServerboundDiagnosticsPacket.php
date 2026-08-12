@@ -61,7 +61,6 @@ class ServerboundDiagnosticsPacket extends DataPacket implements ServerboundPack
 	private array $whiskerScopes = [];
 
 	/**
-	 * @generate-create-func
 	 * @param MemoryCategoryCounter[]      $memoryCategoryValues
 	 * @param EntityDiagnosticTimingInfo[] $entityDiagnostics
 	 * @param SystemDiagnosticTimingInfo[] $systemDiagnostics

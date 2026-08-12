@@ -33,9 +33,6 @@ class PlaySoundPacket extends DataPacket implements ClientboundPacket{
 	public int $loopCount = 0;
 	public ?int $serverSoundHandle = null;
 
-	/**
-	 * @generate-create-func
-	 */
 	public static function create(
 		string $soundName,
 		float $x,

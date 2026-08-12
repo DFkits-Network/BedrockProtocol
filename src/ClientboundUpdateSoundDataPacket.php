@@ -33,9 +33,6 @@ class ClientboundUpdateSoundDataPacket extends DataPacket implements Clientbound
 	private ?SoundData $pause = null;
 	private ?SoundData $resume = null;
 
-	/**
-	 * @generate-create-func
-	 */
 	public static function create(int $serverSoundHandle, string $soundEvent) : self{
 		$result = new self;
 		$result->serverSoundHandle = $serverSoundHandle;

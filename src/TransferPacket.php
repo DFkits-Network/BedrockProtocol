@@ -28,9 +28,6 @@ class TransferPacket extends DataPacket implements ClientboundPacket{
 	public bool $reloadWorld;
 	public ?GatheringJoinInfo $gatheringJoinInfo = null;
 
-	/**
-	 * @generate-create-func
-	 */
 	public static function create(string $address, int $port, bool $reloadWorld, ?GatheringJoinInfo $gatheringJoinInfo = null) : self{
 		$result = new self;
 		$result->address = $address;
