@@ -120,7 +120,16 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 				VarInt::writeSignedLong($out, $entry->scoreboardId);
 				switch($entryType){
 					case ScorePacketEntry::TYPE_REMOVE:
-						CommonTypes::writeOptional($out, $entry->objectiveName, CommonTypes::putString(...));
+						if($protocolId === ProtocolInfo::PROTOCOL_1_26_40){
+							/*
+							 * 1.26.44版本中在此项前添加了一个bool，但是没有更改协议号(还是.40的2168)
+							 * HACK: 直接写false(0x00)，同时兼容.40和.44两个版本
+							*/
+							CommonTypes::putBool($out, false);
+						}else{
+							CommonTypes::writeOptional($out, $entry->objectiveName, CommonTypes::putString(...));
+						}
+
 						break;
 					case ScorePacketEntry::TYPE_PLAYER:
 					case ScorePacketEntry::TYPE_ENTITY:
