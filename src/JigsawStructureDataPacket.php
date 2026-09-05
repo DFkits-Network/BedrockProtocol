@@ -19,6 +19,12 @@ use pmmp\encoding\ByteBufferWriter;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\CacheableNbt;
 
+/**
+ * Sends the server's jigsaw structure rules as network NBT.
+ * Servers targeting 1.26.50 send the actual structure registry before StartGame.
+ * Encoding an empty CompoundTag is valid NBT, but does not establish that the
+ * client has received the structure rules required to initialize the world.
+ */
 class JigsawStructureDataPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::JIGSAW_STRUCTURE_DATA_PACKET;
 

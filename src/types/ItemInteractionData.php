@@ -59,6 +59,10 @@ final class ItemInteractionData{
 				}
 			}
 			$transactionData = new UseItemTransactionData();
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+				$transactionData->decodeAuthInput($in, $protocolId);
+				return new self($requestId, $requestChangedSlots, $transactionData);
+			}
 			CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::readOptional($in, function(ByteBufferReader $in) use ($transactionData, $protocolId) : bool{
 				$transactionData->decodeAuthInput($in, $protocolId);
 				return true;
@@ -80,14 +84,21 @@ final class ItemInteractionData{
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeSignedInt($out, $this->requestId);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			CommonTypes::putBool($out, $this->requestId !== 0);
-			if($this->requestId !== 0){
+			$hasChangedSlots = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50
+				? $this->requestId < -1 && ($this->requestId & 1) === 0
+				: $this->requestId !== 0;
+			CommonTypes::putBool($out, $hasChangedSlots);
+			if($hasChangedSlots){
 				VarInt::writeUnsignedInt($out, count($this->requestChangedSlots));
 				foreach($this->requestChangedSlots as $changedSlot){
 					$changedSlot->write($out);
 				}
 			}
-			CommonTypes::writeOptional($out, $this->transactionData, fn(ByteBufferWriter $out, UseItemTransactionData $v) => CommonTypes::writeOptional($out, $v, fn(ByteBufferWriter $out, UseItemTransactionData $v) => $v->encodeAuthInput($out, $protocolId)));
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+				$this->transactionData->encodeAuthInput($out, $protocolId);
+			}else{
+				CommonTypes::writeOptional($out, $this->transactionData, fn(ByteBufferWriter $out, UseItemTransactionData $v) => CommonTypes::writeOptional($out, $v, fn(ByteBufferWriter $out, UseItemTransactionData $v) => $v->encodeAuthInput($out, $protocolId)));
+			}
 			return;
 		}
 

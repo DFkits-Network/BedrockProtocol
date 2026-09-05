@@ -1327,6 +1327,34 @@ final class CommonTypes{
 	}
 
 	/**
+	 * Cereal optionals used an extra conditional presence flag before 1.26.50.
+	 * Only use this for fields which previously had both flags, not ordinary optionals.
+	 *
+	 * @phpstan-template T
+	 * @phpstan-param \Closure(ByteBufferReader) : (T|null) $reader
+	 * @phpstan-return T|null
+	 * @throws DataDecodeException
+	 */
+	public static function readCerealOptional(ByteBufferReader $in, int $protocolId, \Closure $reader) : mixed{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_50 && !self::getBool($in)){
+			return null;
+		}
+		return self::readOptional($in, $reader);
+	}
+
+	/**
+	 * @phpstan-template T
+	 * @phpstan-param T|null $value
+	 * @phpstan-param \Closure(ByteBufferWriter, T) : void $writer
+	 */
+	public static function writeCerealOptional(ByteBufferWriter $out, int $protocolId, mixed $value, \Closure $writer) : void{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_50){
+			self::putBool($out, true);
+		}
+		self::writeOptional($out, $value, $writer);
+	}
+
+	/**
 	 * @phpstan-template T
 	 * @phpstan-param T|null $value
 	 * @phpstan-param \Closure(ByteBufferWriter, T) : void $writer

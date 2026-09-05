@@ -17,6 +17,9 @@ namespace pocketmine\network\mcpe\protocol\types;
 use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\PacketDecodeException;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use function array_fill;
 use function count;
 
@@ -39,16 +42,22 @@ class SubChunkPacketHeightMapInfo{
 		return $this->heights[(($z & 0xf) << 4) | ($x & 0xf)];
 	}
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : self{
 		$heights = [];
 		for($i = 0; $i < 256; ++$i){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50 && $i % 16 === 0 && VarInt::readUnsignedInt($in) !== 16){
+				throw new PacketDecodeException("Expected exactly 16 heightmap values per row");
+			}
 			$heights[] = Byte::readSigned($in);
 		}
 		return new self($heights);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
 		for($i = 0; $i < 256; ++$i){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50 && $i % 16 === 0){
+				VarInt::writeUnsignedInt($out, 16);
+			}
 			Byte::writeSigned($out, $this->heights[$i]);
 		}
 	}

@@ -14,7 +14,6 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol;
 
-use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
@@ -297,7 +296,7 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 		$this->headYaw = LE::readFloat($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$this->inputFlags = new BitSet(PlayerAuthInputFlags::NUMBER_OF_FLAGS);
-			if(CommonTypes::getBool($in)){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50 || CommonTypes::getBool($in)){
 				for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; ++$i){
 					$flag = VarInt::readSignedInt($in);
 					if($flag < 0 || $flag >= PlayerAuthInputFlags::NUMBER_OF_FLAGS){
@@ -340,9 +339,9 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 			$this->delta = CommonTypes::getVector3($in);
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			$this->itemInteractionData = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::readOptional($in, fn(ByteBufferReader $in) => ItemInteractionData::read($in, $protocolId)));
-			$this->itemStackRequest = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::readOptional($in, fn(ByteBufferReader $in) => ItemStackRequest::read($in, $protocolId)));
-			$this->blockActions = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::readOptional($in, function(ByteBufferReader $in) : array{
+			$this->itemInteractionData = CommonTypes::readCerealOptional($in, $protocolId, fn(ByteBufferReader $in) => ItemInteractionData::read($in, $protocolId));
+			$this->itemStackRequest = CommonTypes::readCerealOptional($in, $protocolId, fn(ByteBufferReader $in) => ItemStackRequest::read($in, $protocolId));
+			$this->blockActions = CommonTypes::readCerealOptional($in, $protocolId, function(ByteBufferReader $in) : array{
 				$blockActions = [];
 				$max = VarInt::readUnsignedInt($in);
 				for($i = 0; $i < $max; ++$i){
@@ -352,7 +351,7 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 					$blockActions[] = PlayerBlockActionWithBlockInfo::read($in, $actionType, true);
 				}
 				return $blockActions;
-			}));
+			});
 			$this->vehicleInfo = PlayerAuthInputVehicleInfo::read($in, $protocolId);
 			if($this->vehicleInfo->isNull()){
 				$this->vehicleInfo = null;
@@ -416,7 +415,9 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 					$setFlags[] = $i;
 				}
 			}
-			CommonTypes::putBool($out, true);
+			if($protocolId < ProtocolInfo::PROTOCOL_1_26_50){
+				CommonTypes::putBool($out, true);
+			}
 			VarInt::writeUnsignedInt($out, count($setFlags));
 			foreach($setFlags as $flag){
 				VarInt::writeSignedInt($out, $flag);
@@ -442,12 +443,9 @@ class PlayerAuthInputPacket extends DataPacket implements ServerboundPacket{
 			CommonTypes::putVector3($out, $this->delta);
 		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			Byte::writeUnsigned($out, 1);
-			CommonTypes::writeOptional($out, $this->itemInteractionData, fn(ByteBufferWriter $out, ItemInteractionData $v) => $v->write($out, $protocolId));
-			Byte::writeUnsigned($out, 1);
-			CommonTypes::writeOptional($out, $this->itemStackRequest, fn(ByteBufferWriter $out, ItemStackRequest $v) => $v->write($out, $protocolId));
-			Byte::writeUnsigned($out, 1);
-			CommonTypes::writeOptional($out, $this->blockActions, function(ByteBufferWriter $out, array $blockActions) : void{
+			CommonTypes::writeCerealOptional($out, $protocolId, $this->itemInteractionData, fn(ByteBufferWriter $out, ItemInteractionData $v) => $v->write($out, $protocolId));
+			CommonTypes::writeCerealOptional($out, $protocolId, $this->itemStackRequest, fn(ByteBufferWriter $out, ItemStackRequest $v) => $v->write($out, $protocolId));
+			CommonTypes::writeCerealOptional($out, $protocolId, $this->blockActions, function(ByteBufferWriter $out, array $blockActions) : void{
 				VarInt::writeUnsignedInt($out, count($blockActions));
 				/** @var PlayerBlockAction[] $blockActions */
 				foreach($blockActions as $blockAction){

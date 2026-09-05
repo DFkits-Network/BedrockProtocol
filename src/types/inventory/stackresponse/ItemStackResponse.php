@@ -56,8 +56,7 @@ final class ItemStackResponse{
 		$requestId = CommonTypes::readItemStackRequestId($in);
 		$containerInfos = [];
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			//v2168: a "has container info" bool followed by a "present" bool gate the container list
-			if(CommonTypes::getBool($in) && CommonTypes::getBool($in)){
+			if(($protocolId >= ProtocolInfo::PROTOCOL_1_26_50 || CommonTypes::getBool($in)) && CommonTypes::getBool($in)){
 				for($i = 0, $len = VarInt::readUnsignedInt($in); $i < $len; ++$i){
 					$containerInfos[] = ItemStackResponseContainerInfo::read($in, $protocolId);
 				}
@@ -78,8 +77,9 @@ final class ItemStackResponse{
 		}
 		CommonTypes::writeItemStackRequestId($out, $this->requestId);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			//v2168: always write the "has container info" bool, followed by a "present" bool
-			CommonTypes::putBool($out, true);
+			if($protocolId < ProtocolInfo::PROTOCOL_1_26_50){
+				CommonTypes::putBool($out, true);
+			}
 			if(count($this->containerInfos) !== 0){
 				CommonTypes::putBool($out, true);
 				VarInt::writeUnsignedInt($out, count($this->containerInfos));

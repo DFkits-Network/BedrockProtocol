@@ -171,7 +171,7 @@ class ServerboundDiagnosticsPacket extends DataPacket implements ServerboundPack
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 				$this->entityDiagnostics = [];
 				for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; $i++){
-					$this->entityDiagnostics[] = EntityDiagnosticTimingInfo::read($in);
+					$this->entityDiagnostics[] = EntityDiagnosticTimingInfo::read($in, $protocolId);
 				}
 
 				$this->systemDiagnostics = [];
@@ -215,7 +215,7 @@ class ServerboundDiagnosticsPacket extends DataPacket implements ServerboundPack
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 				VarInt::writeUnsignedInt($out, count($this->entityDiagnostics));
 				foreach($this->entityDiagnostics as $value){
-					$value->write($out);
+					$value->write($out, $protocolId);
 				}
 
 				VarInt::writeUnsignedInt($out, count($this->systemDiagnostics));
