@@ -249,6 +249,39 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 		}
 	}
 
+	/** @var array<int, string> */
+	private static array $itemTableCache = [];
+
+	/**
+	 * @param ItemTypeEntry[] $itemTable
+	 * @phpstan-param list<ItemTypeEntry> $itemTable
+	 */
+	private static function getEncodedItemTable(int $protocolId, array $itemTable) : string{
+		$encoded = self::$itemTableCache[$protocolId] ?? null;
+		if($encoded === null){
+			$out = new ByteBufferWriter();
+			VarInt::writeUnsignedInt($out, count($itemTable));
+			foreach($itemTable as $entry){
+				CommonTypes::putString($out, $entry->getStringId());
+				LE::writeSignedShort($out, $entry->getNumericId());
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+					CommonTypes::putBool($out, $entry->isComponentBased());
+				}
+			}
+			$encoded = $out->getData();
+			self::$itemTableCache[$protocolId] = $encoded;
+		}
+		return $encoded;
+	}
+
+	/**
+	 * @param ItemTypeEntry[] $itemTable
+	 * @phpstan-param list<ItemTypeEntry> $itemTable
+	 */
+	public static function prewarmItemTableCache(int $protocolId, array $itemTable) : void{
+		self::getEncodedItemTable($protocolId, $itemTable);
+	}
+
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorUniqueId($out, $this->actorUniqueId);
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
@@ -275,14 +308,7 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 		$this->encodeBlockPalette($out, $protocolId);
 
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_21_50){
-			VarInt::writeUnsignedInt($out, count($this->itemTable));
-			foreach($this->itemTable as $entry){
-				CommonTypes::putString($out, $entry->getStringId());
-				LE::writeSignedShort($out, $entry->getNumericId());
-				if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
-					CommonTypes::putBool($out, $entry->isComponentBased());
-				}
-			}
+			$out->writeByteArray(self::getEncodedItemTable($protocolId, $this->itemTable));
 		}
 
 		CommonTypes::putString($out, $this->multiplayerCorrelationId);
