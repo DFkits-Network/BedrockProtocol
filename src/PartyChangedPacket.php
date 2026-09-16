@@ -55,9 +55,10 @@ class PartyChangedPacket extends DataPacket implements ServerboundPacket{
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
-			$hasPartyInfo = $this->partyId !== null && $this->partyLeader !== null;
-			CommonTypes::putBool($out, $hasPartyInfo);
-			if($hasPartyInfo){
+			if($this->partyId === null || $this->partyLeader === null){
+				CommonTypes::putBool($out, false);
+			}else{
+				CommonTypes::putBool($out, true);
 				CommonTypes::putString($out, $this->partyId);
 				CommonTypes::putBool($out, $this->partyLeader);
 			}
