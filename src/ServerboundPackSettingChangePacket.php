@@ -22,6 +22,7 @@ use pocketmine\network\mcpe\protocol\types\BoolPackSetting;
 use pocketmine\network\mcpe\protocol\types\FloatPackSetting;
 use pocketmine\network\mcpe\protocol\types\PackSetting;
 use pocketmine\network\mcpe\protocol\types\PackSettingType;
+use pocketmine\network\mcpe\protocol\types\StringListPackSetting;
 use pocketmine\network\mcpe\protocol\types\StringPackSetting;
 use Ramsey\Uuid\UuidInterface;
 
@@ -54,10 +55,16 @@ class ServerboundPackSettingChangePacket extends DataPacket implements Serverbou
 			PackSettingType::FLOAT => FloatPackSetting::read($in, $name),
 			PackSettingType::BOOL => BoolPackSetting::read($in, $name),
 			PackSettingType::STRING => StringPackSetting::read($in, $name),
+			PackSettingType::STRING_LIST => $protocolId >= ProtocolInfo::PROTOCOL_1_26_50
+				? StringListPackSetting::read($in, $name)
+				: throw new PacketDecodeException("String-list pack settings require protocol 1.26.50"),
 		};
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_50 && $this->packSetting instanceof StringListPackSetting){
+			throw new \InvalidArgumentException("String-list pack settings require protocol 1.26.50");
+		}
 		CommonTypes::putUUID($out, $this->packId);
 		CommonTypes::putString($out, $this->packSetting->getName());
 		VarInt::writeUnsignedInt($out, $this->packSetting->getTypeId()->value);

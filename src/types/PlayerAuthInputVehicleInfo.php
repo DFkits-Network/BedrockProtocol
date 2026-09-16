@@ -14,7 +14,6 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types;
 
-use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
@@ -41,8 +40,8 @@ final class PlayerAuthInputVehicleInfo{
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			$rotation = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::readOptional($in, fn(ByteBufferReader $in) => [LE::readFloat($in), LE::readFloat($in)]));
-			$predictedVehicleActorUniqueId = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => CommonTypes::readOptional($in, CommonTypes::getActorUniqueId(...)));
+			$rotation = CommonTypes::readCerealOptional($in, $protocolId, fn(ByteBufferReader $in) => [LE::readFloat($in), LE::readFloat($in)]);
+			$predictedVehicleActorUniqueId = CommonTypes::readCerealOptional($in, $protocolId, CommonTypes::getActorUniqueId(...));
 
 			return new self($rotation[0] ?? null, $rotation[1] ?? null, $predictedVehicleActorUniqueId);
 		}
@@ -59,15 +58,11 @@ final class PlayerAuthInputVehicleInfo{
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$rotation = $this->vehicleRotationX !== null && $this->vehicleRotationZ !== null ? [$this->vehicleRotationX, $this->vehicleRotationZ] : null;
-			//The outer optionals are the always-present cereal conditionals. The inner
-			//optionals carry whether the vehicle fields are present for this input tick.
-			Byte::writeUnsigned($out, 1);
-			CommonTypes::writeOptional($out, $rotation, function(ByteBufferWriter $out, array $rotation) : void{
+			CommonTypes::writeCerealOptional($out, $protocolId, $rotation, function(ByteBufferWriter $out, array $rotation) : void{
 				LE::writeFloat($out, $rotation[0]);
 				LE::writeFloat($out, $rotation[1]);
 			});
-			Byte::writeUnsigned($out, 1);
-			CommonTypes::writeOptional($out, $this->predictedVehicleActorUniqueId, CommonTypes::putActorUniqueId(...));
+			CommonTypes::writeCerealOptional($out, $protocolId, $this->predictedVehicleActorUniqueId, CommonTypes::putActorUniqueId(...));
 			return;
 		}
 

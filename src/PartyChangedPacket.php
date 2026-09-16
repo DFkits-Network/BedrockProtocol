@@ -21,24 +21,32 @@ use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 class PartyChangedPacket extends DataPacket implements ServerboundPacket{
 	public const NETWORK_ID = ProtocolInfo::PARTY_CHANGED_PACKET;
 
-	private string $partyId;
-	private bool $partyLeader;
+	private ?string $partyId = null;
+	private ?bool $partyLeader = null;
 
 	/**
 	 * @generate-create-func
 	 */
-	public static function create(string $partyId, bool $partyLeader) : self{
+	public static function create(?string $partyId, ?bool $partyLeader) : self{
 		$result = new self;
 		$result->partyId = $partyId;
 		$result->partyLeader = $partyLeader;
 		return $result;
 	}
 
-	public function getPartyId() : string{ return $this->partyId; }
+	public function getPartyId() : ?string{ return $this->partyId; }
 
-	public function isPartyLeader() : bool{ return $this->partyLeader; }
+	public function isPartyLeader() : ?bool{ return $this->partyLeader; }
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			if(CommonTypes::getBool($in)){
+				$this->partyId = CommonTypes::getString($in);
+				$this->partyLeader = CommonTypes::getBool($in);
+			}
+			return;
+		}
+
 		$this->partyId = CommonTypes::getString($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			$this->partyLeader = CommonTypes::getBool($in);
@@ -46,9 +54,20 @@ class PartyChangedPacket extends DataPacket implements ServerboundPacket{
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		CommonTypes::putString($out, $this->partyId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			if($this->partyId === null || $this->partyLeader === null){
+				CommonTypes::putBool($out, false);
+			}else{
+				CommonTypes::putBool($out, true);
+				CommonTypes::putString($out, $this->partyId);
+				CommonTypes::putBool($out, $this->partyLeader);
+			}
+			return;
+		}
+
+		CommonTypes::putString($out, $this->partyId ?? throw new \InvalidArgumentException("Party ID is required before protocol 1.26.50"));
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
-			CommonTypes::putBool($out, $this->partyLeader);
+			CommonTypes::putBool($out, $this->partyLeader ?? throw new \InvalidArgumentException("Party leader state is required before protocol 1.26.50"));
 		}
 	}
 

@@ -46,6 +46,7 @@ class UseItemTransactionData extends TransactionData{
 	private int $blockRuntimeId;
 	private PredictedResult $clientInteractPrediction;
 	private int $clientCooldownState;
+	private int $hand = 0;
 
 	public function getActionType() : int{
 		return $this->actionType;
@@ -69,6 +70,9 @@ class UseItemTransactionData extends TransactionData{
 		return $this->itemInHand;
 	}
 
+	/** 0 = main hand, 1 = off hand (standalone InventoryTransaction only). */
+	public function getHand() : int{ return $this->hand; }
+
 	public function getPlayerPosition() : Vector3{
 		return $this->playerPosition;
 	}
@@ -86,6 +90,14 @@ class UseItemTransactionData extends TransactionData{
 	public function getClientCooldownState() : int{ return $this->clientCooldownState; }
 
 	protected function decodeData(ByteBufferReader $in, int $protocolId) : void{
+		$this->decodeUseItemData($in, $protocolId, $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+	}
+
+	protected function decodeAuthInputData(ByteBufferReader $in, int $protocolId) : void{
+		$this->decodeUseItemData($in, $protocolId, false);
+	}
+
+	private function decodeUseItemData(ByteBufferReader $in, int $protocolId, bool $hasHand) : void{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			$this->actionType = VarInt::readSignedInt($in);
 		}else{
@@ -103,6 +115,7 @@ class UseItemTransactionData extends TransactionData{
 			$this->face = VarInt::readSignedInt($in);
 		}
 		$this->hotbarSlot = VarInt::readSignedInt($in);
+		$this->hand = $hasHand ? Byte::readUnsigned($in) : 0;
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			$this->itemInHand = CommonTypes::getNetworkItemStackDescriptor($in, $protocolId);
 		}else{
@@ -125,6 +138,14 @@ class UseItemTransactionData extends TransactionData{
 	}
 
 	protected function encodeData(ByteBufferWriter $out, int $protocolId) : void{
+		$this->encodeUseItemData($out, $protocolId, $protocolId >= ProtocolInfo::PROTOCOL_1_26_50);
+	}
+
+	protected function encodeAuthInputData(ByteBufferWriter $out, int $protocolId) : void{
+		$this->encodeUseItemData($out, $protocolId, false);
+	}
+
+	private function encodeUseItemData(ByteBufferWriter $out, int $protocolId, bool $hasHand) : void{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			VarInt::writeSignedInt($out, $this->actionType);
 		}else{
@@ -144,6 +165,9 @@ class UseItemTransactionData extends TransactionData{
 			VarInt::writeSignedInt($out, $this->face);
 		}
 		VarInt::writeSignedInt($out, $this->hotbarSlot);
+		if($hasHand){
+			Byte::writeUnsigned($out, $this->hand);
+		}
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
 			CommonTypes::putNetworkItemStackDescriptor($out, $this->itemInHand, $protocolId);
 		}else{
@@ -179,6 +203,7 @@ class UseItemTransactionData extends TransactionData{
 		int $blockRuntimeId,
 		PredictedResult $clientInteractPrediction,
 		int $clientCooldownState,
+		int $hand,
 	) : self{
 		$result = new self;
 		$result->actionType = $actionType;
@@ -192,14 +217,15 @@ class UseItemTransactionData extends TransactionData{
 		$result->blockRuntimeId = $blockRuntimeId;
 		$result->clientInteractPrediction = $clientInteractPrediction;
 		$result->clientCooldownState = $clientCooldownState;
+		$result->hand = $hand;
 		return $result;
 	}
 
 	/**
 	 * @param NetworkInventoryAction[] $actions
 	 */
-	public static function new(array $actions, int $actionType, TriggerType $triggerType, BlockPosition $blockPosition, int $face, int $hotbarSlot, ItemStackWrapper $itemInHand, Vector3 $playerPosition, Vector3 $clickPosition, int $blockRuntimeId, PredictedResult $clientInteractPrediction, int $clientCooldownState) : self{
-		$result = self::initSelf($actionType, $triggerType, $blockPosition, $face, $hotbarSlot, $itemInHand, $playerPosition, $clickPosition, $blockRuntimeId, $clientInteractPrediction, $clientCooldownState);
+	public static function new(array $actions, int $actionType, TriggerType $triggerType, BlockPosition $blockPosition, int $face, int $hotbarSlot, ItemStackWrapper $itemInHand, Vector3 $playerPosition, Vector3 $clickPosition, int $blockRuntimeId, PredictedResult $clientInteractPrediction, int $clientCooldownState, int $hand = 0) : self{
+		$result = self::initSelf($actionType, $triggerType, $blockPosition, $face, $hotbarSlot, $itemInHand, $playerPosition, $clickPosition, $blockRuntimeId, $clientInteractPrediction, $clientCooldownState, $hand);
 		$result->actions = $actions;
 		return $result;
 	}

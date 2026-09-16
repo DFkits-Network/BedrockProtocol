@@ -61,6 +61,10 @@ abstract class TransactionData{
 		for($i = 0; $i < $actionCount; ++$i){
 			$this->actions[] = (new NetworkInventoryAction())->readAuthInput($in, $protocolId, $hasItemStackIds);
 		}
+		$this->decodeAuthInputData($in, $protocolId);
+	}
+
+	protected function decodeAuthInputData(ByteBufferReader $in, int $protocolId) : void{
 		$this->decodeData($in, $protocolId);
 	}
 
@@ -89,6 +93,10 @@ abstract class TransactionData{
 		foreach($this->actions as $action){
 			$action->writeAuthInput($out, $protocolId);
 		}
+		$this->encodeAuthInputData($out, $protocolId);
+	}
+
+	protected function encodeAuthInputData(ByteBufferWriter $out, int $protocolId) : void{
 		$this->encodeData($out, $protocolId);
 	}
 

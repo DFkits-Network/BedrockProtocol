@@ -43,6 +43,7 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 	public float $pitch = 0.0;
 	public float $yaw = 0.0;
 	public float $headYaw = 0.0;
+	public int $tick = 0;
 
 	/** @throws DataDecodeException */
 	private function maybeReadCoord(int $flag, ByteBufferReader $in, int $protocolId) : float{
@@ -102,6 +103,7 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 			if(CommonTypes::getBool($in)){
 				$this->flags |= self::FLAG_FORCE_COMPLETION;
 			}
+			$this->tick = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50 ? VarInt::readUnsignedLong($in) : 0;
 			return;
 		}
 
@@ -159,6 +161,9 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 			CommonTypes::putBool($out, ($this->flags & self::FLAG_TELEPORT) !== 0);
 			CommonTypes::putBool($out, ($this->flags & self::FLAG_FORCE_MOVE_LOCAL_ENTITY) !== 0);
 			CommonTypes::putBool($out, ($this->flags & self::FLAG_FORCE_COMPLETION) !== 0);
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+				VarInt::writeUnsignedLong($out, $this->tick);
+			}
 			return;
 		}
 

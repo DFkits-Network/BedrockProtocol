@@ -18,6 +18,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
 use pocketmine\color\Color;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\GetTypeIdFromConstTrait;
 
@@ -33,6 +34,7 @@ final class PrimitiveShapeTextPayload extends PrimitiveShapePayload{
 		private bool $depthTest,
 		private bool $showBackface,
 		private bool $showTextBackface,
+		private float $lineGapHeight = 0.0,
 	){}
 
 	public function getText() : string{ return $this->text; }
@@ -47,21 +49,27 @@ final class PrimitiveShapeTextPayload extends PrimitiveShapePayload{
 
 	public function hasShowTextBackface() : bool{ return $this->showTextBackface; }
 
-	public static function read(ByteBufferReader $in) : self{
+	public function getLineGapHeight() : float{ return $this->lineGapHeight; }
+
+	public static function read(ByteBufferReader $in, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : self{
 		$text = CommonTypes::getString($in);
 		$useRotation = CommonTypes::getBool($in);
 		$backgroundColor = CommonTypes::readOptional($in, fn() => Color::fromARGB(LE::readUnsignedInt($in)));
+		$lineGapHeight = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50 ? LE::readFloat($in) : 0.0;
 		$depthTest = CommonTypes::getBool($in);
 		$showBackface = CommonTypes::getBool($in);
 		$showTextBackface = CommonTypes::getBool($in);
 
-		return new self($text, $useRotation, $backgroundColor, $depthTest, $showBackface, $showTextBackface,);
+		return new self($text, $useRotation, $backgroundColor, $depthTest, $showBackface, $showTextBackface, $lineGapHeight);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId = ProtocolInfo::CURRENT_PROTOCOL) : void{
 		CommonTypes::putString($out, $this->text);
 		CommonTypes::putBool($out, $this->useRotation);
 		CommonTypes::writeOptional($out, $this->backgroundColor, fn(ByteBufferWriter $out, Color $color) => LE::writeUnsignedInt($out, $color->toARGB()));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+			LE::writeFloat($out, $this->lineGapHeight);
+		}
 		CommonTypes::putBool($out, $this->depthTest);
 		CommonTypes::putBool($out, $this->showBackface);
 		CommonTypes::putBool($out, $this->showTextBackface);

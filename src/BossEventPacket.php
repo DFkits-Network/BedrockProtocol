@@ -119,7 +119,7 @@ class BossEventPacket extends DataPacket implements ClientboundPacket, Serverbou
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->bossActorUniqueId = CommonTypes::getActorUniqueId($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			$this->playerActorUniqueId = CommonTypes::getActorUniqueId($in);
+			$this->playerActorUniqueId = $protocolId < ProtocolInfo::PROTOCOL_1_26_50 ? CommonTypes::getActorUniqueId($in) : 0;
 			$this->eventType = Byte::readUnsigned($in);
 			$this->title = CommonTypes::getString($in);
 			$this->filteredTitle = CommonTypes::getString($in);
@@ -170,7 +170,9 @@ class BossEventPacket extends DataPacket implements ClientboundPacket, Serverbou
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorUniqueId($out, $this->bossActorUniqueId);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			CommonTypes::putActorUniqueId($out, $this->playerActorUniqueId);
+			if($protocolId < ProtocolInfo::PROTOCOL_1_26_50){
+				CommonTypes::putActorUniqueId($out, $this->playerActorUniqueId);
+			}
 			Byte::writeUnsigned($out, $this->eventType);
 			CommonTypes::putString($out, $this->title);
 			CommonTypes::putString($out, $this->filteredTitle);

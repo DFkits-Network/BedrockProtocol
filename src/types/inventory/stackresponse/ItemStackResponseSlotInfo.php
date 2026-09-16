@@ -51,11 +51,12 @@ final class ItemStackResponseSlotInfo{
 		$hotbarSlot = Byte::readUnsigned($in);
 		$count = Byte::readUnsigned($in);
 		$itemStackId = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40
-			? CommonTypes::readOptional($in, static fn(ByteBufferReader $in) => CommonTypes::getBool($in) ? CommonTypes::readServerItemStackId($in) : null)
+			? CommonTypes::readCerealOptional($in, $protocolId, CommonTypes::readServerItemStackId(...))
 			: CommonTypes::readServerItemStackId($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_200){
 			$customName = CommonTypes::getString($in);
 		}
+		$filteredCustomName = null;
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$filteredCustomName = CommonTypes::readOptional($in, CommonTypes::getString(...));
 		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_50){
@@ -64,7 +65,7 @@ final class ItemStackResponseSlotInfo{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_210){
 			$durabilityCorrection = VarInt::readSignedInt($in);
 		}
-		return new self($slot, $hotbarSlot, $count, $itemStackId, $customName ?? "", $filteredCustomName ?? $customName ?? "", $durabilityCorrection ?? 0);
+		return new self($slot, $hotbarSlot, $count, $itemStackId, $customName ?? "", $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? $filteredCustomName : ($filteredCustomName ?? $customName ?? ""), $durabilityCorrection ?? 0);
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
@@ -72,10 +73,7 @@ final class ItemStackResponseSlotInfo{
 		Byte::writeUnsigned($out, $this->hotbarSlot);
 		Byte::writeUnsigned($out, $this->count);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			CommonTypes::writeOptional($out, $this->itemStackId, static function(ByteBufferWriter $out, int $itemStackId) : void{
-				CommonTypes::putBool($out, true);
-				CommonTypes::writeServerItemStackId($out, $itemStackId);
-			});
+			CommonTypes::writeCerealOptional($out, $protocolId, ($this->itemStackId ?? 0) > 0 ? $this->itemStackId : null, CommonTypes::writeServerItemStackId(...));
 		}else{
 			CommonTypes::writeServerItemStackId($out, $this->itemStackId ?? 0);
 		}

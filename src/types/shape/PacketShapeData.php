@@ -264,7 +264,7 @@ final class PacketShapeData{
 			$payload = match($payloadType){
 				PrimitiveShapeType::PAYLOAD_TYPE_NONE => null,
 				PrimitiveShapeType::PAYLOAD_TYPE_ARROW => PrimitiveShapeArrowPayload::read($in),
-				PrimitiveShapeType::PAYLOAD_TYPE_TEXT => PrimitiveShapeTextPayload::read($in),
+				PrimitiveShapeType::PAYLOAD_TYPE_TEXT => PrimitiveShapeTextPayload::read($in, $protocolId),
 				PrimitiveShapeType::PAYLOAD_TYPE_BOX => PrimitiveShapeBoxPayload::read($in),
 				PrimitiveShapeType::PAYLOAD_TYPE_LINE => PrimitiveShapeLinePayload::read($in),
 				PrimitiveShapeType::PAYLOAD_TYPE_CIRCLE_OR_SPHERE => PrimitiveShapeCircleOrSpherePayload::read($in),
@@ -328,7 +328,11 @@ final class PacketShapeData{
 			}
 
 			VarInt::writeUnsignedInt($out, $this->payload?->getTypeId() ?? PrimitiveShapeType::PAYLOAD_TYPE_NONE);
-			$this->payload?->write($out);
+			if($this->payload instanceof PrimitiveShapeTextPayload){
+				$this->payload->write($out, $protocolId);
+			}else{
+				$this->payload?->write($out);
+			}
 		}else{
 			CommonTypes::writeOptional($out, $this->payload instanceof PrimitiveShapeTextPayload ? $this->payload->getText() : null, CommonTypes::putString(...));
 			CommonTypes::writeOptional($out, $this->payload instanceof PrimitiveShapeBoxPayload ? $this->payload->getBoxBound() : null, CommonTypes::putVector3(...));
