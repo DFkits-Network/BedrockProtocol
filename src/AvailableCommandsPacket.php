@@ -172,7 +172,7 @@ final class AvailableCommandsPacket extends DataPacket implements ClientboundPac
 	}
 
 	public static function convertArg(int $protocolId, int $type) : int{
-		// Keep the shared API constant stable; only the 2192 wire identifier changes.
+		// Keep the shared API constant stable; only the 1.26.50 wire identifier changes.
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50 && $type === self::ARG_TYPE_COMMAND){
 			return 90;
 		}
